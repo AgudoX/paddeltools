@@ -1,0 +1,168 @@
+<div class="resumen-container">
+  <div class="resumen-card">
+    <div class="header">
+      <h1 class="titulo-principal">🏆 Resumen del Americano</h1>
+      <button class="btn-back" (click)="backToForm()">
+        ← Volver a Configuración
+      </button>
+    </div>
+
+    <!-- Success Message -->
+    <div class="mensaje-exito" *ngIf="copiedMessage">
+      ✓ ¡Copiado al portapapeles!
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="acciones-container">
+      <button class="btn btn-primary" (click)="copySummary()">
+        📋 Copiar Resumen
+      </button>
+      <button class="btn btn-success" (click)="shareWhatsApp()">
+        💬 Compartir por WhatsApp
+      </button>
+      <button class="btn btn-info" (click)="toggleStatistics()">
+        📊 {{ showStatistics ? 'Ocultar' : 'Ver' }} Ranking
+      </button>
+    </div>
+
+    <!-- Matches List -->
+    <div class="seccion">
+      <h2 class="seccion-titulo">Partidos por Rondas</h2>
+      
+      <div class="rondas-container">
+        <div class="ronda-seccion" *ngFor="let roundNumber of rounds">
+          <h3 class="ronda-titulo">
+            Ronda {{ roundNumber }}
+            <span class="ronda-info">({{ matchesByRound.get(roundNumber)?.length }} partido(s) simultáneo(s))</span>
+          </h3>
+          
+          <div class="partidos-grid">
+            <div class="partido-card" *ngFor="let match of matchesByRound.get(roundNumber)">
+          <div class="partido-header">
+            <span class="partido-numero">Partido {{ match.number }}</span>
+            <button 
+              class="btn-editar" 
+              (click)="editScore(match.number)"
+              *ngIf="editingMatch !== match.number"
+            >
+              Puntuar
+            </button>
+          </div>
+
+          <div class="partido-body">
+            <!-- Pair 1 -->
+            <div class="pareja" [class.ganadora]="hasWinner(match) && match.scorePair1! > match.scorePair2!">
+              <div class="pareja-jugadores">
+                <span class="jugador-nombre">{{ match.pair1[0].name }}</span>
+                <span class="jugador-posicion">({{ match.pair1[0].position }})</span>
+                <span class="separador">&</span>
+                <span class="jugador-nombre">{{ match.pair1[1].name }}</span>
+                <span class="jugador-posicion">({{ match.pair1[1].position }})</span>
+              </div>
+              
+              <div class="puntuacion" *ngIf="editingMatch !== match.number">
+                <span *ngIf="match.scorePair1 !== undefined" class="puntos">
+                  {{ match.scorePair1 }}
+                </span>
+              </div>
+
+              <input 
+                *ngIf="editingMatch === match.number"
+                type="number" 
+                [(ngModel)]="match.scorePair1"
+                class="puntuacion-input"
+                min="0"
+                placeholder="0"
+              />
+            </div>
+
+            <div class="vs">VS</div>
+
+            <!-- Pair 2 -->
+            <div class="pareja" [class.ganadora]="hasWinner(match) && match.scorePair2! > match.scorePair1!">
+              <div class="pareja-jugadores">
+                <span class="jugador-nombre">{{ match.pair2[0].name }}</span>
+                <span class="jugador-posicion">({{ match.pair2[0].position }})</span>
+                <span class="separador">&</span>
+                <span class="jugador-nombre">{{ match.pair2[1].name }}</span>
+                <span class="jugador-posicion">({{ match.pair2[1].position }})</span>
+              </div>
+              
+              <div class="puntuacion" *ngIf="editingMatch !== match.number">
+                <span *ngIf="match.scorePair2 !== undefined" class="puntos">
+                  {{ match.scorePair2 }}
+                </span>
+              </div>
+
+              <input 
+                *ngIf="editingMatch === match.number"
+                type="number" 
+                [(ngModel)]="match.scorePair2"
+                class="puntuacion-input"
+                min="0"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <!-- Winner display -->
+          <div class="ganador-banner" *ngIf="hasWinner(match)">
+            🏆 Ganadores: {{ getWinners(match) }}
+          </div>
+
+          <!-- Edit buttons -->
+          <div class="botones-edicion" *ngIf="editingMatch === match.number">
+            <button class="btn-guardar" (click)="saveScore(match)">
+               Guardar
+            </button>
+            <button class="btn-cancelar" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rankings/Statistics -->
+    <div class="seccion" *ngIf="showStatistics && statistics.length > 0" #statisticsSection>
+      <h2 class="seccion-titulo">🏅 Clasificación</h2>
+      
+      <div class="tabla-responsive">
+        <table class="tabla-estadisticas">
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>Jugador</th>
+              <th>Jugados</th>
+              <th>Ganados</th>
+              <th>Puntos a Favor</th>
+              <th>Puntos en Contra</th>
+              <th>Dif</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let stats of statistics; let i = index" [class.top-3]="i < 3">
+              <td class="rank">
+                <span *ngIf="i === 0">🥇</span>
+                <span *ngIf="i === 1">🥈</span>
+                <span *ngIf="i === 2">🥉</span>
+                <span *ngIf="i > 2">{{ i + 1 }}</span>
+              </td>
+              <td class="nombre">{{ stats.player.name }}</td>
+              <td>{{ stats.matchesPlayed }}</td>
+              <td class="destacado">{{ stats.matchesWon }}</td>
+              <td>{{ stats.pointsFor }}</td>
+              <td>{{ stats.pointsAgainst }}</td>
+              <td [class.positivo]="stats.difference > 0" [class.negativo]="stats.difference < 0">
+                {{ stats.difference > 0 ? '+' : '' }}{{ stats.difference }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+

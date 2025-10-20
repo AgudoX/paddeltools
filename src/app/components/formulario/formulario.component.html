@@ -1,0 +1,191 @@
+<div class="formulario-container">
+  <div class="formulario-card">
+    <h1 class="titulo-principal">🏓 Padeleando</h1>
+    <p class="subtitulo">Organiza tu americano de pádel</p>
+
+    <!-- Errores -->
+    <div class="errores" *ngIf="errors.length > 0">
+      <div class="error-item" *ngFor="let error of errors">
+        ⚠️ {{ error }}
+      </div>
+    </div>
+
+    <!-- Configuración básica -->
+    <div class="seccion">
+      <h2 class="seccion-titulo">Configuración Básica</h2>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="numberOfPlayers">Número de Jugadores</label>
+          <input
+            type="number"
+            id="numberOfPlayers"
+            [(ngModel)]="numberOfPlayers"
+            (change)="onNumberOfPlayersChange()"
+            min="8"
+            step="4"
+            class="form-input"
+          />
+          <small class="form-hint">Debe ser múltiplo de 4 (mínimo 8)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="numberOfRounds">Número de Rondas</label>
+          <input
+            type="number"
+            id="numberOfRounds"
+            [(ngModel)]="numberOfRounds"
+            min="1"
+            class="form-input"
+          />
+          <small class="form-hint">Cada ronda tiene {{ numberOfPlayers / 4 }} partido(s) simultáneo(s)</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="mode">Modo de Emparejamiento</label>
+        <select
+          id="mode"
+          [(ngModel)]="mode"
+          (change)="onModeChange()"
+          class="form-select"
+        >
+          <option value="libre">Modo Libre (rotación completa)</option>
+          <option value="parejas-fijas">Parejas Fijas</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Lista de jugadores (Modo Libre) -->
+    <div class="seccion" *ngIf="mode === 'libre'">
+      <h2 class="seccion-titulo">Jugadores</h2>
+      
+      <div class="jugadores-grid">
+        <div class="jugador-card" *ngFor="let player of players; let i = index">
+          <div class="jugador-numero">{{ i + 1 }}</div>
+          
+          <div class="jugador-content">
+            <div class="form-group">
+              <label [for]="'nombre-' + player.id">Nombre</label>
+              <input
+                type="text"
+                [id]="'nombre-' + player.id"
+                [(ngModel)]="player.name"
+                class="form-input"
+                placeholder="Nombre del jugador"
+              />
+            </div>
+
+            <div class="jugador-opciones">
+              <div class="form-group">
+                <label [for]="'posicion-' + player.id">Posición</label>
+                <select
+                  [id]="'posicion-' + player.id"
+                  [(ngModel)]="player.position"
+                  class="form-select"
+                >
+                  <option value="indiferente">Indiferente</option>
+                  <option value="derecha">Derecha</option>
+                  <option value="reves">Revés</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de parejas (Modo Parejas Fijas) -->
+    <div class="seccion" *ngIf="mode === 'parejas-fijas'">
+      <h2 class="seccion-titulo">Parejas</h2>
+      <p class="seccion-descripcion">Define las parejas que jugarán juntas durante todo el torneo</p>
+      
+      <div class="parejas-grid">
+        <div class="pareja-card" *ngFor="let pair of pairs; let i = index">
+          <div class="pareja-header">
+            <span class="pareja-numero">Pareja {{ i + 1 }}</span>
+          </div>
+          
+          <div class="pareja-content">
+            <!-- Jugador 1 -->
+            <div class="pareja-jugador">
+              <div class="jugador-label">Jugador 1</div>
+              <div class="form-group">
+                <label [for]="'pair-' + pair.id + '-p1-name'">Nombre</label>
+                <input
+                  type="text"
+                  [id]="'pair-' + pair.id + '-p1-name'"
+                  [(ngModel)]="pair.player1.name"
+                  class="form-input"
+                  placeholder="Nombre del jugador 1"
+                />
+              </div>
+              <div class="form-group">
+                <label [for]="'pair-' + pair.id + '-p1-pos'">Posición</label>
+                <select
+                  [id]="'pair-' + pair.id + '-p1-pos'"
+                  [(ngModel)]="pair.player1.position"
+                  class="form-select"
+                >
+                  <option value="indiferente">Indiferente</option>
+                  <option value="derecha">Derecha</option>
+                  <option value="reves">Revés</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pareja-vs">+</div>
+
+            <!-- Jugador 2 -->
+            <div class="pareja-jugador">
+              <div class="jugador-label">Jugador 2</div>
+              <div class="form-group">
+                <label [for]="'pair-' + pair.id + '-p2-name'">Nombre</label>
+                <input
+                  type="text"
+                  [id]="'pair-' + pair.id + '-p2-name'"
+                  [(ngModel)]="pair.player2.name"
+                  class="form-input"
+                  placeholder="Nombre del jugador 2"
+                />
+              </div>
+              <div class="form-group">
+                <label [for]="'pair-' + pair.id + '-p2-pos'">Posición</label>
+                <select
+                  [id]="'pair-' + pair.id + '-p2-pos'"
+                  [(ngModel)]="pair.player2.position"
+                  class="form-select"
+                >
+                  <option value="indiferente">Indiferente</option>
+                  <option value="derecha">Derecha</option>
+                  <option value="reves">Revés</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="botones-container">
+      <button
+        class="btn btn-secondary"
+        (click)="clear()"
+        [disabled]="loading"
+      >
+        🗑️ Limpiar
+      </button>
+      
+      <button
+        class="btn btn-primary"
+        (click)="generateTournament()"
+        [disabled]="loading"
+      >
+        <span *ngIf="!loading">⚡ Generar Americano</span>
+        <span *ngIf="loading">Generando...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
