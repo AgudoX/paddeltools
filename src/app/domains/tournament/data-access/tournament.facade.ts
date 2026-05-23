@@ -12,11 +12,13 @@ export class TournamentFacade {
   private readonly _config = signal<TournamentConfig | null>(null);
   private readonly _loading = signal(false);
   private readonly _history = signal<TournamentRecord[]>([]);
+  private readonly _currentTournamentId = signal<string | null>(null);
 
   readonly matches = this._matches.asReadonly();
   readonly config = this._config.asReadonly();
   readonly loading = this._loading.asReadonly();
   readonly history = this._history.asReadonly();
+  readonly currentTournamentId = this._currentTournamentId.asReadonly();
 
   constructor() {
     this.apiService.matches$
@@ -30,12 +32,16 @@ export class TournamentFacade {
     this.apiService.history$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(h => this._history.set(h));
+
+    this.apiService.currentTournamentId$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(id => this._currentTournamentId.set(id));
   }
 
-  generateTournament(config: TournamentConfig): void {
+  generateTournament(config: TournamentConfig): string {
     this._loading.set(true);
     try {
-      this.apiService.generateTournament(config);
+      return this.apiService.generateTournament(config);
     } finally {
       this._loading.set(false);
     }
@@ -50,6 +56,10 @@ export class TournamentFacade {
   }
 
   calculateStatistics(): PlayerStats[] {
+    const config = this._config();
+    if (config?.mode === 'fixed-pairs') {
+      return this.apiService.calculatePairStatistics();
+    }
     return this.apiService.calculateStatistics();
   }
 
@@ -63,6 +73,10 @@ export class TournamentFacade {
 
   deleteHistoryRecord(recordId: string): void {
     this.apiService.deleteHistoryRecord(recordId);
+  }
+
+   clearCurrentTournamentId(): void {
+    this.apiService.clearCurrentTournamentId();
   }
 
   clearData(): void {

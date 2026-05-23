@@ -36,58 +36,26 @@
         <app-primary-button
           variant="outline-dark"
           icon="history"
-          (clicked)="toggleHistory()"
+          (clicked)="goToHistory()"
         >
           Historial
         </app-primary-button>
       </div>
     </header>
 
-    <!-- ═══ HISTORY ──────────────────── -->
-    @if (showHistory()) {
-      <section class="section">
-        <div class="history-panel">
-          <h2 class="section-title">
-            <mat-icon>history</mat-icon>
-            Torneos Anteriores
-          </h2>
-
-          @let records = facade.history();
-          @if (records.length === 0) {
-            <p class="empty-hint">Aún no hay torneos guardados.</p>
-          } @else {
-            <div class="history-list">
-              @for (record of records; track record.id) {
-                <div class="history-item">
-                  <div class="history-meta">
-                    <span class="history-label">{{ record.label }}</span>
-                    <span class="history-info">
-                      {{ record.config.mode === 'fixed-pairs' ? 'Parejas fijas' : 'Libre' }}
-                      · {{ record.matches.length }} partidos
-                    </span>
-                  </div>
-                  <div class="history-actions">
-                    <app-primary-button
-                      variant="dark"
-                      icon="upload"
-                      (clicked)="onLoadTournament(record.id)"
-                    >
-                      Cargar
-                    </app-primary-button>
-                    <app-primary-button
-                      variant="danger"
-                      icon="delete"
-                      (clicked)="onDeleteHistory(record.id)"
-                    >
-                    </app-primary-button>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      </section>
-    }
+    <!-- ═══ TOURNAMENT NAME ──────────── -->
+    <section class="section">
+      <div class="field">
+        <label for="tournamentName">Nombre del Torneo</label>
+        <input
+          id="tournamentName"
+          type="text"
+          [(ngModel)]="tournamentName"
+          class="form-input"
+          placeholder="Ej: Viernes de pádel"
+        />
+      </div>
+    </section>
 
     <!-- ═══ CONFIG ───────────────────── -->
     <section class="section">
@@ -95,27 +63,22 @@
 
       <div class="config-grid">
         <div class="field">
-          <label for="numberOfPlayers">Número de Jugadores</label>
-          <input
-            type="number"
-            id="numberOfPlayers"
-            [(ngModel)]="numberOfPlayers"
-            (change)="onNumberOfPlayersChange()"
-            min="8"
-            step="4"
-            class="form-input"
+          <label>Número de Jugadores</label>
+          <app-neon-counter
+            [value]="numberOfPlayers"
+            [min]="8"
+            [step]="4"
+            (changed)="onNeonPlayersChange($event)"
           />
           <small class="field-hint">Múltiplo de 4 (mín. 8)</small>
         </div>
 
         <div class="field">
-          <label for="numberOfRounds">Rondas</label>
-          <input
-            type="number"
-            id="numberOfRounds"
-            [(ngModel)]="numberOfRounds"
-            min="1"
-            class="form-input"
+          <label>Rondas</label>
+          <app-neon-counter
+            [value]="numberOfRounds"
+            [min]="1"
+            (changed)="onNeonRoundsChange($event)"
           />
           <small class="field-hint">
             {{ numberOfPlayers / 4 }} partido(s) por ronda

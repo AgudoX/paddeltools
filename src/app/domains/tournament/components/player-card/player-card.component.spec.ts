@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PlayerCardComponent } from './player-card.component';
-import { Player } from '../../../../shared/models/player.model';
+import { Player } from '@shared/models/player.model';
 
 describe('PlayerCardComponent', () => {
   let component: PlayerCardComponent;

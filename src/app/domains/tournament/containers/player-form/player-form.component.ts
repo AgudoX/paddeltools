@@ -1,14 +1,29 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { MatIconModule } from '@angular/material/icon';
-import { TournamentFacade } from '@domain/tournament/data-access/tournament.facade';
-import { Player, PairingMode, ScoringMode, TournamentConfig } from '@shared/models/player.model';
-import { PrimaryButtonComponent } from '@shared/components/primary-button/primary-button.component';
-import { SnackbarComponent, SnackbarType } from '@shared/components/snackbar/snackbar.component';
-import { PlayerCardComponent } from '@domain/tournament/components/player-card/player-card.component';
-import { PairCardComponent } from '@domain/tournament/components/pair-card/pair-card.component';
+import {
+  Component,
+  OnInit,
+  inject,
+  ChangeDetectionStrategy,
+  signal,
+} from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+import { Router } from "@angular/router";
+import { MatIconModule } from "@angular/material/icon";
+import { TournamentFacade } from "@domain/tournament/data-access/tournament.facade";
+import {
+  Player,
+  PairingMode,
+  ScoringMode,
+  TournamentConfig,
+} from "@shared/models/player.model";
+import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
+import {
+  SnackbarComponent,
+  SnackbarType,
+} from "@shared/components/snackbar/snackbar.component";
+import { PlayerCardComponent } from "@domain/tournament/components/player-card/player-card.component";
+import { PairCardComponent } from "@domain/tournament/components/pair-card/pair-card.component";
+import { NeonCounterComponent } from "@shared/components/neon-counter/neon-counter.component";
 
 interface PairForm {
   id: number;
@@ -17,7 +32,7 @@ interface PairForm {
 }
 
 @Component({
-  selector: 'app-player-form',
+  selector: "app-player-form",
   standalone: true,
   imports: [
     CommonModule,
@@ -27,39 +42,41 @@ interface PairForm {
     SnackbarComponent,
     PlayerCardComponent,
     PairCardComponent,
+    NeonCounterComponent,
   ],
-  templateUrl: './player-form.component.html',
-  styleUrl: './player-form.component.scss',
+  templateUrl: "./player-form.component.html",
+  styleUrl: "./player-form.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlayerFormComponent implements OnInit {
-  protected readonly facade = inject(TournamentFacade);
+  private readonly facade = inject(TournamentFacade);
   private readonly router = inject(Router);
 
+  tournamentName = "";
   numberOfPlayers = 8;
   numberOfRounds = 3;
-  mode: PairingMode = 'free';
-  scoringMode: ScoringMode = 'sets';
+  mode: PairingMode = "free";
+  scoringMode: ScoringMode = "sets";
   players: Player[] = [];
   pairs: PairForm[] = [];
   errors: string[] = [];
   loading = false;
-  showHistory = signal(false);
-  snackbarMessage = signal('');
-  snackbarType = signal<SnackbarType>('success');
+  snackbarMessage = signal("");
+  snackbarType = signal<SnackbarType>("success");
   showSnackbar = signal(false);
   private snackbarTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     const config = this.facade.config();
     if (config) {
+      this.tournamentName = config.name ?? "";
       this.numberOfPlayers = config.numberOfPlayers;
       this.numberOfRounds = config.numberOfRounds;
       this.mode = config.mode;
-      this.scoringMode = config.scoringMode ?? 'sets';
+      this.scoringMode = config.scoringMode ?? "sets";
       this.players = [...config.players];
 
-      if (this.mode === 'fixed-pairs') {
+      if (this.mode === "fixed-pairs") {
         this.convertPlayersToPairs();
       }
     }
@@ -73,7 +90,7 @@ export class PlayerFormComponent implements OnInit {
     this.pairs = [];
     const pairsMap = new Map<number, Player[]>();
 
-    this.players.forEach(player => {
+    this.players.forEach((player) => {
       if (player.pairId !== undefined && player.pairId !== null) {
         if (!pairsMap.has(player.pairId)) {
           pairsMap.set(player.pairId, []);
@@ -101,13 +118,13 @@ export class PlayerFormComponent implements OnInit {
         player1: {
           id: baseId,
           name: `Jugador ${baseId}`,
-          position: 'either',
+          position: "either",
           pairId: newPairId,
         },
         player2: {
           id: baseId + 1,
           name: `Jugador ${baseId + 1}`,
-          position: 'either',
+          position: "either",
           pairId: newPairId,
         },
       });
@@ -116,7 +133,7 @@ export class PlayerFormComponent implements OnInit {
 
   convertPairsToPlayers(): void {
     this.players = [];
-    this.pairs.forEach(pair => {
+    this.pairs.forEach((pair) => {
       pair.player1.pairId = pair.id;
       pair.player2.pairId = pair.id;
       this.players.push(pair.player1, pair.player2);
@@ -124,7 +141,7 @@ export class PlayerFormComponent implements OnInit {
   }
 
   updateNumberOfPlayers(): void {
-    if (this.mode === 'fixed-pairs') {
+    if (this.mode === "fixed-pairs") {
       const expectedPairs = this.numberOfPlayers / 2;
       const diff = expectedPairs - this.pairs.length;
 
@@ -137,13 +154,13 @@ export class PlayerFormComponent implements OnInit {
             player1: {
               id: baseId,
               name: `Jugador ${baseId}`,
-              position: 'either',
+              position: "either",
               pairId: newPairId,
             },
             player2: {
               id: baseId + 1,
               name: `Jugador ${baseId + 1}`,
-              position: 'either',
+              position: "either",
               pairId: newPairId,
             },
           });
@@ -160,12 +177,12 @@ export class PlayerFormComponent implements OnInit {
         for (let i = 0; i < diff; i++) {
           const newId =
             this.players.length > 0
-              ? Math.max(...this.players.map(p => p.id)) + 1
+              ? Math.max(...this.players.map((p) => p.id)) + 1
               : 1;
           this.players.push({
             id: newId,
             name: `Jugador ${newId}`,
-            position: 'either',
+            position: "either",
             pairId: undefined,
           });
         }
@@ -190,24 +207,42 @@ export class PlayerFormComponent implements OnInit {
     this.updateNumberOfPlayers();
   }
 
+  onNeonPlayersChange(value: number): void {
+    this.numberOfPlayers = value;
+    this.onNumberOfPlayersChange();
+  }
+
+  onNeonRoundsChange(value: number): void {
+    this.numberOfRounds = Math.max(1, value);
+  }
+
   onModeChange(): void {
-    if (this.mode === 'free') {
-      this.players.forEach(p => (p.pairId = undefined));
+    if (this.mode === "free") {
+      this.players.forEach((p) => (p.pairId = undefined));
       this.pairs = [];
     } else {
       this.convertPlayersToPairs();
     }
   }
 
-  onPlayerUpdate(change: { id: number; name?: string; position?: Player['position'] }): void {
-    const player = this.players.find(p => p.id === change.id);
+  onPlayerUpdate(change: {
+    id: number;
+    name?: string;
+    position?: Player["position"];
+  }): void {
+    const player = this.players.find((p) => p.id === change.id);
     if (!player) return;
     if (change.name !== undefined) player.name = change.name;
     if (change.position !== undefined) player.position = change.position;
   }
 
-  onPairUpdate(change: { pairId: number; playerId: number; name?: string; position?: Player['position'] }): void {
-    const pair = this.pairs.find(p => p.id === change.pairId);
+  onPairUpdate(change: {
+    pairId: number;
+    playerId: number;
+    name?: string;
+    position?: Player["position"];
+  }): void {
+    const pair = this.pairs.find((p) => p.id === change.pairId);
     if (!pair) return;
     const player =
       pair.player1.id === change.playerId ? pair.player1 : pair.player2;
@@ -219,28 +254,30 @@ export class PlayerFormComponent implements OnInit {
     this.errors = [];
 
     if (this.numberOfPlayers < 8) {
-      this.errors.push('Debe haber al menos 8 jugadores');
+      this.errors.push("Debe haber al menos 8 jugadores");
     }
 
     if (this.numberOfPlayers % 4 !== 0) {
-      this.errors.push('El número de jugadores debe ser múltiplo de 4');
+      this.errors.push("El número de jugadores debe ser múltiplo de 4");
     }
 
     if (this.numberOfRounds < 1) {
-      this.errors.push('Debe haber al menos 1 ronda');
+      this.errors.push("Debe haber al menos 1 ronda");
     }
 
-    const emptyNames = this.players.filter(p => !p.name.trim());
+    const emptyNames = this.players.filter((p) => !p.name.trim());
     if (emptyNames.length > 0) {
-      this.errors.push('Todos los jugadores deben tener nombre');
+      this.errors.push("Todos los jugadores deben tener nombre");
     }
 
-    const uniqueNames = new Set(this.players.map(p => p.name.trim().toLowerCase()));
+    const uniqueNames = new Set(
+      this.players.map((p) => p.name.trim().toLowerCase()),
+    );
     if (uniqueNames.size !== this.players.length) {
-      this.errors.push('Los nombres de los jugadores deben ser únicos');
+      this.errors.push("Los nombres de los jugadores deben ser únicos");
     }
 
-    if (this.mode === 'fixed-pairs') {
+    if (this.mode === "fixed-pairs") {
       this.convertPairsToPlayers();
 
       this.pairs.forEach((pair, index) => {
@@ -251,15 +288,13 @@ export class PlayerFormComponent implements OnInit {
         }
       });
 
-      const allNames = this.pairs.flatMap(p => [
+      const allNames = this.pairs.flatMap((p) => [
         p.player1.name.trim(),
         p.player2.name.trim(),
       ]);
-      const unique = new Set(allNames.map(n => n.toLowerCase()));
+      const unique = new Set(allNames.map((n) => n.toLowerCase()));
       if (unique.size !== allNames.length) {
-        this.errors.push(
-          'Los nombres de todos los jugadores deben ser únicos',
-        );
+        this.errors.push("Los nombres de todos los jugadores deben ser únicos");
       }
     }
 
@@ -273,6 +308,7 @@ export class PlayerFormComponent implements OnInit {
 
     try {
       const config: TournamentConfig = {
+        name: this.tournamentName,
         numberOfPlayers: this.numberOfPlayers,
         numberOfRounds: this.numberOfRounds,
         mode: this.mode,
@@ -280,37 +316,21 @@ export class PlayerFormComponent implements OnInit {
         players: this.players,
       };
 
-      this.facade.generateTournament(config);
-      this.router.navigate(['/summary']);
-    } catch (error: any) {
-      this.errors.push(error.message || 'Error al generar el americano');
+      const tournamentId = this.facade.generateTournament(config);
+      this.router.navigate(["/tournament", tournamentId]);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al generar el americano";
+      this.errors.push(message);
       this.loading = false;
     }
   }
 
-  onLoadTournament(recordId: string): void {
-    const record = this.facade.loadTournament(recordId);
-    if (record) {
-      this.numberOfPlayers = record.config.numberOfPlayers;
-      this.numberOfRounds = record.config.numberOfRounds;
-      this.mode = record.config.mode;
-      this.scoringMode = record.config.scoringMode ?? 'sets';
-      this.players = [...record.config.players];
-      this.showHistory.set(false);
-
-      if (this.mode === 'fixed-pairs') {
-        this.convertPlayersToPairs();
-      }
-    }
-  }
-
-  onDeleteHistory(recordId: string): void {
-    this.facade.deleteHistoryRecord(recordId);
-    this.showSnack('Registro eliminado del historial', 'success');
-  }
-
-  toggleHistory(): void {
-    this.showHistory.update(v => !v);
+  goToHistory(): void {
+    this.facade.clearCurrentTournamentId();
+    this.router.navigate(["/history"]);
   }
 
   protected showSnack(message: string, type: SnackbarType): void {
@@ -329,11 +349,12 @@ export class PlayerFormComponent implements OnInit {
   }
 
   clear(): void {
-    if (confirm('¿Estás seguro de que quieres limpiar todos los datos?')) {
+    if (confirm("¿Estás seguro de que quieres limpiar todos los datos?")) {
       this.facade.clearData();
+      this.tournamentName = "";
       this.numberOfPlayers = 8;
       this.numberOfRounds = 3;
-      this.mode = 'free';
+      this.mode = "free";
       this.players = [];
       this.pairs = [];
       this.errors = [];

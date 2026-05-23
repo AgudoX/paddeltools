@@ -24,10 +24,11 @@
       "@core/*": ["./src/app/core/*"],
       "@shared/*": ["./src/app/shared/*"],
       "@domain/*": ["./src/app/domains/*"],
-      "@env/*": ["./src/environments/*"]
+      "@env/*": ["./src/environments/*"],
     },
-    "ignoreDeprecations": "6.0",
+    "types": ["vitest/globals"],
   },
+  "exclude": ["vitest.config.ts"],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

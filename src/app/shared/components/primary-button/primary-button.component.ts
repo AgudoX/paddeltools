@@ -1,18 +1,34 @@
-import { Component, input, output, ChangeDetectionStrategy, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatIconModule } from '@angular/material/icon';
+import {
+  Component,
+  input,
+  output,
+  ChangeDetectionStrategy,
+  computed,
+} from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { MatIconModule } from "@angular/material/icon";
 
-export type PrimaryButtonVariant = 'primary' | 'dark' | 'soft' | 'outline-dark' | 'success' | 'info' | 'danger';
+export type PrimaryButtonVariant =
+  | "primary"
+  | "dark"
+  | "soft"
+  | "outline-dark"
+  | "success"
+  | "info"
+  | "danger"
+  | "violet"
+  | "outline-violet";
+export type PrimaryButtonSize = "md" | "lg";
 
 @Component({
-  selector: 'app-primary-button',
+  selector: "app-primary-button",
   standalone: true,
   imports: [CommonModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
       class="app-btn"
-      [ngClass]="variantClass()"
+      [ngClass]="[variantClass(), sizeClass()]"
       [disabled]="disabled() || loading()"
       [type]="type()"
       (click)="clicked.emit()"
@@ -80,7 +96,9 @@ export type PrimaryButtonVariant = 'primary' | 'dark' | 'soft' | 'outline-dark' 
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .btn-primary {
@@ -154,15 +172,39 @@ export type PrimaryButtonVariant = 'primary' | 'dark' | 'soft' | 'outline-dark' 
         color: var(--on-dark);
       }
     }
-  `
+
+    .btn-violet {
+      background: var(--violet-500);
+      color: var(--on-violet);
+
+      &:hover:not(:disabled) {
+        background: var(--violet-600);
+        box-shadow: 0 0 20px oklch(60.6% 0.25 292.717 / 0.3);
+      }
+    }
+
+    .btn-outline-violet {
+      background: transparent;
+      color: var(--violet-400);
+      border: 1px solid var(--violet-500);
+
+      &:hover:not(:disabled) {
+        background: var(--violet-500);
+        color: var(--on-violet);
+        box-shadow: 0 0 15px oklch(60.6% 0.25 292.717 / 0.2);
+      }
+    }
+  `,
 })
 export class PrimaryButtonComponent {
-  readonly variant = input<PrimaryButtonVariant>('primary');
+  readonly variant = input<PrimaryButtonVariant>("primary");
+  readonly size = input<PrimaryButtonSize>("md");
   readonly disabled = input(false);
   readonly loading = input(false);
-  readonly type = input<'button' | 'submit'>('button');
-  readonly icon = input<string>('');
+  readonly type = input<"button" | "submit">("button");
+  readonly icon = input<string>("");
   readonly clicked = output<void>();
 
   protected readonly variantClass = computed(() => `btn-${this.variant()}`);
+  protected readonly sizeClass = computed(() => `btn-${this.size()}`);
 }

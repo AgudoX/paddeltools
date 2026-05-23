@@ -15,11 +15,14 @@
       <app-primary-button variant="primary" icon="content_copy" (clicked)="copySummary()">
         Copiar Resumen
       </app-primary-button>
-      <app-primary-button variant="success" icon="chat" (clicked)="shareWhatsApp()">
+      <app-primary-button variant="success" icon="chat_paste_go_2" (clicked)="shareWhatsApp()">
         Compartir por WhatsApp
       </app-primary-button>
-      <app-primary-button variant="info" icon="bar_chart" (clicked)="toggleStatistics()">
+      <app-primary-button variant="dark" icon="bar_chart" (clicked)="toggleStatistics()">
         {{ showStatistics ? 'Ocultar' : 'Ver' }} Ranking
+      </app-primary-button>
+      <app-primary-button variant="outline-dark" icon="history" (clicked)="goToHistory()">
+        Historial
       </app-primary-button>
     </div>
 
@@ -38,25 +41,26 @@
                   <div class="match-header">
                     <span class="match-number">Partido {{ match.number }}</span>
                     @if (editingMatch !== match.number) {
-                      <app-primary-button variant="primary" (clicked)="editScore(match.number)">
+                      <app-primary-button variant="primary" size="lg" (clicked)="editScore(match.number)">
                         Puntuar
                       </app-primary-button>
                     }
                   </div>
 
                   <div class="match-body">
-                    <!-- Pair 1 -->
-                    <div class="pair"
-                      [class.winner]="match.scoringMode === 'points' && hasWinner(match) && (match.scorePair1 ?? 0) > (match.scorePair2 ?? 0)">
-                      <div class="pair-players">
-                        <span class="player-name">{{ match.pair1[0].name }}</span>
-                        <span class="player-position">({{ match.pair1[0].position }})</span>
-                        <span class="separator">&</span>
-                        <span class="player-name">{{ match.pair1[1].name }}</span>
-                        <span class="player-position">({{ match.pair1[1].position }})</span>
-                      </div>
+                    @if (editingMatch !== match.number) {
+                      <!-- VIEW MODE -->
+                      <div class="pair"
+                        [class.winner]="matchWinner(match) === 'pair1'"
+                        [class.loser]="matchWinner(match) === 'pair2'">
+                        <div class="pair-players">
+                          <span class="player-name">{{ match.pair1[0].name }}</span>
+                          <span class="player-position">({{ match.pair1[0].position }})</span>
+                          <span class="separator">&</span>
+                          <span class="player-name">{{ match.pair1[1].name }}</span>
+                          <span class="player-position">({{ match.pair1[1].position }})</span>
+                        </div>
 
-                      @if (editingMatch !== match.number) {
                         @if (match.scoringMode === 'sets') {
                           <div class="sets-display">
                             @for (set of match.sets; track trackSet($index)) {
@@ -77,27 +81,21 @@
                             }
                           </div>
                         }
-                      }
-
-                      @if (editingMatch === match.number && match.scoringMode === 'points') {
-                        <input type="number" [(ngModel)]="match.scorePair1" class="score-input" min="0" placeholder="0" />
-                      }
-                    </div>
-
-                    <div class="vs">VS</div>
-
-                    <!-- Pair 2 -->
-                    <div class="pair"
-                      [class.winner]="match.scoringMode === 'points' && hasWinner(match) && (match.scorePair2 ?? 0) > (match.scorePair1 ?? 0)">
-                      <div class="pair-players">
-                        <span class="player-name">{{ match.pair2[0].name }}</span>
-                        <span class="player-position">({{ match.pair2[0].position }})</span>
-                        <span class="separator">&</span>
-                        <span class="player-name">{{ match.pair2[1].name }}</span>
-                        <span class="player-position">({{ match.pair2[1].position }})</span>
                       </div>
 
-                      @if (editingMatch !== match.number) {
+                      <div class="vs">VS</div>
+
+                      <div class="pair"
+                        [class.winner]="matchWinner(match) === 'pair2'"
+                        [class.loser]="matchWinner(match) === 'pair1'">
+                        <div class="pair-players">
+                          <span class="player-name">{{ match.pair2[0].name }}</span>
+                          <span class="player-position">({{ match.pair2[0].position }})</span>
+                          <span class="separator">&</span>
+                          <span class="player-name">{{ match.pair2[1].name }}</span>
+                          <span class="player-position">({{ match.pair2[1].position }})</span>
+                        </div>
+
                         @if (match.scoringMode === 'sets') {
                           <div class="sets-display">
                             @for (set of match.sets; track trackSet($index)) {
@@ -118,38 +116,63 @@
                             }
                           </div>
                         }
-                      }
+                      </div>
+                    }
 
-                      @if (editingMatch === match.number && match.scoringMode === 'points') {
+                    @if (editingMatch === match.number && match.scoringMode === 'points') {
+                      <!-- EDIT MODE - POINTS -->
+                      <div class="pair">
+                        <div class="pair-players">
+                          <span class="player-name">{{ match.pair1[0].name }}</span>
+                          <span class="player-position">({{ match.pair1[0].position }})</span>
+                          <span class="separator">&</span>
+                          <span class="player-name">{{ match.pair1[1].name }}</span>
+                          <span class="player-position">({{ match.pair1[1].position }})</span>
+                        </div>
+                        <input type="number" [(ngModel)]="match.scorePair1" class="score-input" min="0" max="99" placeholder="0" />
+                      </div>
+
+                      <div class="vs">VS</div>
+
+                      <div class="pair">
+                        <div class="pair-players">
+                          <span class="player-name">{{ match.pair2[0].name }}</span>
+                          <span class="player-position">({{ match.pair2[0].position }})</span>
+                          <span class="separator">&</span>
+                          <span class="player-name">{{ match.pair2[1].name }}</span>
+                          <span class="player-position">({{ match.pair2[1].position }})</span>
+                        </div>
                         <input type="number" [(ngModel)]="match.scorePair2" class="score-input" min="0" placeholder="0" />
-                      }
-                    </div>
+                      </div>
+                    }
 
-                    <!-- Set editing (only in sets mode) -->
                     @if (editingMatch === match.number && match.scoringMode === 'sets') {
-                      <div class="sets-editor">
-                        @for (setIdx of [0,1,2]; track setIdx) {
-                          <div class="set-editor-col">
-                            <span class="set-editor-label">S{{ setIdx + 1 }}</span>
-                            <div class="set-editor-inputs">
-                              <input
-                                type="number"
-                                [(ngModel)]="match.sets[setIdx].pair1Games"
-                                class="set-input"
-                                min="0"
-                                placeholder="0"
-                              />
-                              <span class="set-dash">-</span>
-                              <input
-                                type="number"
-                                [(ngModel)]="match.sets[setIdx].pair2Games"
-                                class="set-input"
-                                min="0"
-                                placeholder="0"
-                              />
-                            </div>
-                          </div>
-                        }
+                      <!-- EDIT MODE - SETS TABLE -->
+                      <div class="sets-editor-table">
+                        <div class="editor-header-row">
+                          <div class="header-cell-player">Parejas</div>
+                          <div class="header-cell-set">S1</div>
+                          <div class="header-cell-set"
+                            [class.disabled]="!shouldShowSet(match, 1)">S2</div>
+                          <div class="header-cell-set"
+                            [class.disabled]="!shouldShowSet(match, 2)">S3</div>
+                        </div>
+                        <div class="editor-body-row">
+                          <div class="player-names">{{ match.pair1[0].name }} / {{ match.pair1[1].name }}</div>
+                          <input type="number" [(ngModel)]="match.sets[0].pair1Games" class="set-input" min="0" max="99" placeholder="0" />
+                          <input type="number" [(ngModel)]="match.sets[1].pair1Games" class="set-input" min="0" max="99" placeholder="0"
+                            [disabled]="!shouldShowSet(match, 1)" />
+                          <input type="number" [(ngModel)]="match.sets[2].pair1Games" class="set-input" min="0" max="99" placeholder="0"
+                            [disabled]="!shouldShowSet(match, 2)" />
+                        </div>
+                        <div class="editor-body-row">
+                          <div class="player-names">{{ match.pair2[0].name }} / {{ match.pair2[1].name }}</div>
+                          <input type="number" [(ngModel)]="match.sets[0].pair2Games" class="set-input" min="0" max="99" placeholder="0" />
+                          <input type="number" [(ngModel)]="match.sets[1].pair2Games" class="set-input" min="0" max="99" placeholder="0"
+                            [disabled]="!shouldShowSet(match, 1)" />
+                          <input type="number" [(ngModel)]="match.sets[2].pair2Games" class="set-input" min="0" max="99" placeholder="0"
+                            [disabled]="!shouldShowSet(match, 2)" />
+                        </div>
                       </div>
                     }
                   </div>
@@ -165,17 +188,17 @@
                     </div>
                   }
 
-                  <!-- Edit buttons -->
-                  @if (editingMatch === match.number) {
-                    <div class="edit-buttons">
-                      <app-primary-button variant="success" icon="save" (clicked)="saveScore(match)">
-                        Guardar
-                      </app-primary-button>
-                      <app-primary-button variant="danger" (clicked)="cancelEdit()">
-                        Cancelar
-                      </app-primary-button>
-                    </div>
-                  }
+                   <!-- Edit buttons -->
+                   @if (editingMatch === match.number) {
+                     <div class="edit-buttons">
+                       <app-primary-button variant="outline-violet" icon="check" (clicked)="saveScore(match)">
+                         Guardar
+                       </app-primary-button>
+                       <app-primary-button variant="danger" icon="close" (clicked)="clearEdit()">
+                         Cancelar
+                       </app-primary-button>
+                     </div>
+                   }
                 </div>
               }
             </div>
@@ -187,45 +210,121 @@
     @if (showStatistics && statistics.length > 0) {
       <div class="section" #statisticsSection>
         <h2 class="section-title"><mat-icon>military_tech</mat-icon> Clasificación</h2>
-        <div class="table-responsive">
-          <table class="statistics-table">
-            <thead>
-              <tr>
-                <th>Pos</th>
-                <th>Jugador</th>
-                <th>Jug.</th>
-                <th>Gan.</th>
-                <th>Sets G</th>
-                <th>Sets P</th>
-                <th>PF</th>
-                <th>PC</th>
-                <th>Dif</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (stats of statistics; track stats; let i = $index) {
-                <tr [class.top-3]="i < 3">
-                  <td class="rank">
-                    @if (i === 0) { <mat-icon>emoji_events</mat-icon> }
-                    @else if (i === 1) { <mat-icon>workspace_premium</mat-icon> }
-                    @else if (i === 2) { <mat-icon>stars</mat-icon> }
-                    @else { <span>{{ i + 1 }}</span> }
-                  </td>
-                  <td class="name">{{ stats.player.name }}</td>
-                  <td>{{ stats.matchesPlayed }}</td>
-                  <td class="highlighted">{{ stats.matchesWon }}</td>
-                  <td>{{ stats.setsWon }}</td>
-                  <td>{{ stats.setsLost }}</td>
-                  <td>{{ stats.pointsFor }}</td>
-                  <td>{{ stats.pointsAgainst }}</td>
-                  <td [class.positive]="stats.difference > 0" [class.negative]="stats.difference < 0">
-                    {{ stats.difference > 0 ? '+' : '' }}{{ stats.difference }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="ranking-actions">
+          <app-primary-button variant="dark" icon="content_copy" (clicked)="copyRanking()">
+            Copiar Ranking
+          </app-primary-button>
+          <app-primary-button variant="dark" icon="chat" (clicked)="shareRankingWhatsApp()">
+            Compartir Ranking
+          </app-primary-button>
         </div>
+
+        <!-- ═══ PODIUM TOP 3 ═══ -->
+        <div class="podium">
+          @if (statistics.length > 1) {
+            <div class="podium-slot second" style="animation-delay: 0.15s">
+              <div class="podium-card">
+                <div class="podium-pos-badge silver">2</div>
+                <div class="podium-medal">🥈</div>
+                <div class="podium-name">{{ statistics[1].player.name }}</div>
+                <div class="podium-record">{{ statistics[1].matchesWon }}G / {{ statistics[1].matchesPlayed }}PJ</div>
+                <div class="podium-diff">
+                  <span class="diff-label">Sets</span>
+                  <span [class.positive]="(statistics[1].setsWon - statistics[1].setsLost) >= 0">+{{ statistics[1].setsWon - statistics[1].setsLost }}</span>
+                </div>
+                <div class="podium-diff">
+                  <span class="diff-label">Pts</span>
+                  @let ptDiff2 = statistics[1].pointsFor - statistics[1].pointsAgainst;
+                  <span [class.positive]="ptDiff2 >= 0" [class.negative]="ptDiff2 < 0">{{ ptDiff2 > 0 ? '+' : '' }}{{ ptDiff2 }}</span>
+                </div>
+              </div>
+              <div class="podium-bar silver"></div>
+            </div>
+          }
+
+          @if (statistics.length > 0) {
+            <div class="podium-slot first" style="animation-delay: 0s">
+              <div class="podium-crown">👑</div>
+              <div class="podium-card">
+                <div class="podium-pos-badge gold">1</div>
+                <div class="podium-medal">🥇</div>
+                <div class="podium-name">{{ statistics[0].player.name }}</div>
+                <div class="podium-record">{{ statistics[0].matchesWon }}G / {{ statistics[0].matchesPlayed }}PJ</div>
+                <div class="podium-diff">
+                  <span class="diff-label">Sets</span>
+                  <span [class.positive]="(statistics[0].setsWon - statistics[0].setsLost) >= 0">+{{ statistics[0].setsWon - statistics[0].setsLost }}</span>
+                </div>
+                <div class="podium-diff">
+                  <span class="diff-label">Pts</span>
+                  @let ptDiff1 = statistics[0].pointsFor - statistics[0].pointsAgainst;
+                  <span [class.positive]="ptDiff1 >= 0" [class.negative]="ptDiff1 < 0">{{ ptDiff1 > 0 ? '+' : '' }}{{ ptDiff1 }}</span>
+                </div>
+              </div>
+              <div class="podium-bar gold"></div>
+            </div>
+          }
+
+          @if (statistics.length > 2) {
+            <div class="podium-slot third" style="animation-delay: 0.3s">
+              <div class="podium-card">
+                <div class="podium-pos-badge bronze">3</div>
+                <div class="podium-medal">🥉</div>
+                <div class="podium-name">{{ statistics[2].player.name }}</div>
+                <div class="podium-record">{{ statistics[2].matchesWon }}G / {{ statistics[2].matchesPlayed }}PJ</div>
+                <div class="podium-diff">
+                  <span class="diff-label">Sets</span>
+                  <span [class.positive]="(statistics[2].setsWon - statistics[2].setsLost) >= 0">+{{ statistics[2].setsWon - statistics[2].setsLost }}</span>
+                </div>
+                <div class="podium-diff">
+                  <span class="diff-label">Pts</span>
+                  @let ptDiff3 = statistics[2].pointsFor - statistics[2].pointsAgainst;
+                  <span [class.positive]="ptDiff3 >= 0" [class.negative]="ptDiff3 < 0">{{ ptDiff3 > 0 ? '+' : '' }}{{ ptDiff3 }}</span>
+                </div>
+              </div>
+              <div class="podium-bar bronze"></div>
+            </div>
+          }
+        </div>
+
+        <!-- ═══ RAW TABLE 4+ ═══ -->
+        @if (statistics.length > 3) {
+          <div class="ranking-table-wrap">
+            <table class="ranking-table">
+              <thead>
+                <tr>
+                  <th class="col-pos">#</th>
+                  <th class="col-name">Jugador</th>
+                  <th class="col-num" title="Jugados">PJ</th>
+                  <th class="col-num" title="Ganados">G</th>
+                  <th class="col-num" title="Sets a favor">SF</th>
+                  <th class="col-num" title="Sets en contra">SC</th>
+                  <th class="col-num" title="Puntos a favor">PF</th>
+                  <th class="col-num" title="Puntos en contra">PC</th>
+                  <th class="col-num" title="Diferencia">Dif</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (stats of statistics.slice(3); track stats; let i = $index) {
+                  <tr [style.animation-delay]="(i * 0.04) + 's'">
+                    <td class="col-pos">
+                      <span class="pos-badge">{{ i + 4 }}</span>
+                    </td>
+                    <td class="col-name">{{ stats.player.name }}</td>
+                    <td class="col-num">{{ stats.matchesPlayed }}</td>
+                    <td class="col-num wins">{{ stats.matchesWon }}</td>
+                    <td class="col-num">{{ stats.setsWon }}</td>
+                    <td class="col-num">{{ stats.setsLost }}</td>
+                    <td class="col-num">{{ stats.pointsFor }}</td>
+                    <td class="col-num">{{ stats.pointsAgainst }}</td>
+                    <td class="col-num diff" [class.positive]="stats.difference > 0" [class.negative]="stats.difference < 0">
+                      {{ stats.difference > 0 ? '+' : '' }}{{ stats.difference }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </div>
     }
   </div>

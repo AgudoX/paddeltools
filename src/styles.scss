@@ -67,13 +67,20 @@ body {
   --hairline-strong: #0c0e10;
   --divider-soft: rgba(255,255,255,0.05);
 
-  /* Accents */
+   /* Accents */
   --accent-blue: #0070f3;
   --accent-green: #00e676;
   --accent-orange: #ff9100;
   --accent-red: #ff3d00;
   --accent-gold: #ffd700;
   --link: #ccff00;
+
+  /* Violet / Purple accents */
+  --violet-300: oklch(81.1% 0.111 293.571);
+  --violet-400: oklch(70.2% 0.183 293.541);
+  --violet-500: oklch(60.6% 0.25 292.717);
+  --violet-600: oklch(54.1% 0.281 293.009);
+  --on-violet: #ffffff;
 
   /* Semantic */
   --color-success: #00e676;

@@ -34,6 +34,7 @@ export interface Match {
 export type PairingMode = 'free' | 'fixed-pairs';
 
 export interface TournamentConfig {
+  name: string;
   numberOfPlayers: number;
   numberOfRounds: number;
   mode: PairingMode;

@@ -4,7 +4,7 @@ import {
   Player,
   TournamentConfig,
   Match,
-} from "../../../shared/models/player.model";
+} from "@shared/models/player.model";
 
 function makePlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -16,6 +16,17 @@ function makePlayers(count: number): Player[] {
         ? "backhand"
         : "either") as Player["position"],
   }));
+}
+
+function makeConfig(overrides: Partial<TournamentConfig> & { players: Player[] }): TournamentConfig {
+  return {
+    name: overrides.name ?? "Test Tournament",
+    numberOfPlayers: overrides.players.length,
+    numberOfRounds: overrides.numberOfRounds ?? 1,
+    mode: overrides.mode ?? "free",
+    scoringMode: overrides.scoringMode ?? "sets",
+    players: overrides.players,
+  };
 }
 
 describe("TournamentService", () => {
@@ -31,72 +42,49 @@ describe("TournamentService", () => {
 
   describe("generateTournament", () => {
     it("generates 2 matches per round for 8 players free mode", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
+      const config = makeConfig({
         numberOfRounds: 3,
-        mode: "free",
         players: makePlayers(8),
-      };
+      });
 
-      const matches = service.generateTournament(config);
+      const tournamentId = service.generateTournament(config);
+      expect(typeof tournamentId).toBe("string");
+      const matches = service["matchesSubject"].value;
       expect(matches.length).toBe(6);
     });
 
     it("generates correct number of matches for 8 players fixed pairs", () => {
       const players = makePlayers(8);
       players.forEach((p) => (p.pairId = Math.ceil(p.id / 2)));
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
+      const config = makeConfig({
         numberOfRounds: 3,
         mode: "fixed-pairs",
         players,
-      };
+      });
 
-      const matches = service.generateTournament(config);
+      const tournamentId = service.generateTournament(config);
+      expect(typeof tournamentId).toBe("string");
+      const matches = service["matchesSubject"].value;
       expect(matches.length).toBe(6);
     });
 
     it("throws for less than 8 players", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 4,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(4),
-      };
-
+      const config = makeConfig({ players: makePlayers(4) });
       expect(() => service.generateTournament(config)).toThrow();
     });
 
     it("throws for non-multiple-of-4 player count", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 10,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(10),
-      };
-
+      const config = makeConfig({ players: makePlayers(10) });
       expect(() => service.generateTournament(config)).toThrow();
     });
 
     it("throws when numberOfRounds < 1", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 0,
-        mode: "free",
-        players: makePlayers(8),
-      };
-
+      const config = makeConfig({ numberOfRounds: 0, players: makePlayers(8) });
       expect(() => service.generateTournament(config)).toThrow();
     });
 
     it("emits matches via matches$", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(8),
-      };
-
+      const config = makeConfig({ players: makePlayers(8) });
       const spy = vi.fn();
       service.matches$.subscribe(spy);
       service.generateTournament(config);
@@ -107,13 +95,7 @@ describe("TournamentService", () => {
     });
 
     it("saves config to localStorage", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(8),
-      };
-
+      const config = makeConfig({ players: makePlayers(8) });
       service.generateTournament(config);
       const stored = localStorage.getItem("paddletools_config");
       expect(stored).toBeTruthy();
@@ -124,12 +106,7 @@ describe("TournamentService", () => {
 
   describe("updateScore", () => {
     it("updates match score and emits", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(8),
-      };
+      const config = makeConfig({ players: makePlayers(8) });
       service.generateTournament(config);
 
       const spy = vi.fn();
@@ -152,12 +129,7 @@ describe("TournamentService", () => {
 
     it("calculates win counts correctly", () => {
       const players = makePlayers(8);
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players,
-      };
+      const config = makeConfig({ players });
       service.generateTournament(config);
 
       service.updateScore(1, 6, 3);
@@ -172,13 +144,9 @@ describe("TournamentService", () => {
   describe("generateSummary", () => {
     it("returns formatted string with match data", () => {
       const players = makePlayers(8);
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players,
-      };
-      const matches = service.generateTournament(config);
+      const config = makeConfig({ players });
+      service.generateTournament(config);
+      const matches = service["matchesSubject"].value;
       const summary = service.generateSummary(matches);
 
       expect(summary).toContain("RONDA 1");
@@ -187,13 +155,9 @@ describe("TournamentService", () => {
 
     it("includes scores when set", () => {
       const players = makePlayers(8);
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players,
-      };
-      const matches = service.generateTournament(config);
+      const config = makeConfig({ players });
+      service.generateTournament(config);
+      const matches = service["matchesSubject"].value;
       matches[0].scorePair1 = 6;
       matches[0].scorePair2 = 3;
 
@@ -204,12 +168,7 @@ describe("TournamentService", () => {
 
   describe("history", () => {
     it("saves history on generateTournament", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(8),
-      };
+      const config = makeConfig({ players: makePlayers(8) });
       service.generateTournament(config);
 
       const history = service.getHistory();
@@ -218,12 +177,7 @@ describe("TournamentService", () => {
     });
 
     it("loadTournament restores config and matches", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(8),
-      };
+      const config = makeConfig({ players: makePlayers(8) });
       service.generateTournament(config);
 
       const history = service.getHistory();
@@ -233,12 +187,7 @@ describe("TournamentService", () => {
     });
 
     it("deleteHistoryRecord removes entry", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(8),
-      };
+      const config = makeConfig({ players: makePlayers(8) });
       service.generateTournament(config);
 
       const history = service.getHistory();
@@ -248,12 +197,10 @@ describe("TournamentService", () => {
 
     it("limits history to 20 entries", () => {
       for (let i = 0; i < 25; i++) {
-        const config: TournamentConfig = {
-          numberOfPlayers: 8,
-          numberOfRounds: 1,
-          mode: "free",
+        const config = makeConfig({
+          name: `Tournament ${i}`,
           players: makePlayers(8),
-        };
+        });
         service.generateTournament(config);
       }
       expect(service.getHistory().length).toBeLessThanOrEqual(20);
@@ -262,12 +209,7 @@ describe("TournamentService", () => {
 
   describe("clearData", () => {
     it("clears localStorage and subjects", () => {
-      const config: TournamentConfig = {
-        numberOfPlayers: 8,
-        numberOfRounds: 1,
-        mode: "free",
-        players: makePlayers(8),
-      };
+      const config = makeConfig({ players: makePlayers(8) });
       service.generateTournament(config);
       service.clearData();
 
