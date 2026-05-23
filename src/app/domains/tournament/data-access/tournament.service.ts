@@ -3,23 +3,68 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Player,
   Match,
+  SetScore,
   TournamentConfig,
   PairingMode,
-  PlayerStats
-} from '../models/jugador.model';
+  PlayerStats,
+  TournamentRecord,
+  ScoringMode
+} from '@shared/models/player.model';
+
+/* ─── Scoring utilities (pure functions) ─── */
+
+export function getSetWinner(set: SetScore): 'pair1' | 'pair2' | null {
+  const { pair1Games: p1, pair2Games: p2 } = set;
+  if (p1 < 0 || p2 < 0) return null;
+  const max = Math.max(p1, p2);
+  const min = Math.min(p1, p2);
+  const diff = max - min;
+  if (max < 6) return null;
+  if (diff >= 2) return p1 > p2 ? 'pair1' : 'pair2';
+  if (max >= 7 && diff === 1) return p1 > p2 ? 'pair1' : 'pair2';
+  return null;
+}
+
+export function getMatchWinner(sets: SetScore[]): 'pair1' | 'pair2' | null {
+  let p1 = 0, p2 = 0;
+  for (const s of sets) {
+    const w = getSetWinner(s);
+    if (w === 'pair1') p1++;
+    else if (w === 'pair2') p2++;
+  }
+  if (p1 >= 2) return 'pair1';
+  if (p2 >= 2) return 'pair2';
+  return null;
+}
+
+export function isSetComplete(set: SetScore): boolean {
+  return getSetWinner(set) !== null;
+}
+
+export function isMatchComplete(sets: SetScore[]): boolean {
+  return getMatchWinner(sets) !== null;
+}
+
+export function isValidPointsInput(p1: number, p2: number): boolean {
+  if (p1 < 0 || p2 < 0) return false;
+  return Math.abs(p1 - p2) >= 2;
+}
 
 @Injectable({
   providedIn: 'root'
 })
-export class AmericanoService {
+export class TournamentService {
   private readonly STORAGE_KEY = 'paddletools_config';
   private readonly MATCHES_KEY = 'paddletools_matches';
-  
+  private readonly HISTORY_KEY = 'paddletools_history';
+
   private configSubject = new BehaviorSubject<TournamentConfig | null>(null);
   private matchesSubject = new BehaviorSubject<Match[]>([]);
-  
+  private historySubject = new BehaviorSubject<TournamentRecord[]>([]);
+
   config$: Observable<TournamentConfig | null> = this.configSubject.asObservable();
   matches$: Observable<Match[]> = this.matchesSubject.asObservable();
+  history$: Observable<TournamentRecord[]> = this.historySubject.asObservable();
 
   constructor() {
     this.loadFromLocalStorage();
@@ -28,7 +73,6 @@ export class AmericanoService {
   generateTournament(config: TournamentConfig): Match[] {
     const { players, numberOfRounds, mode } = config;
     
-    // Validate
     if (players.length < 8 || players.length % 4 !== 0) {
       throw new Error('El número de jugadores debe ser múltiplo de 4 y mínimo 8');
     }
@@ -37,28 +81,28 @@ export class AmericanoService {
       throw new Error('Debe haber al menos 1 ronda');
     }
 
+    const scoringMode: ScoringMode = config.scoringMode ?? 'points';
     let matches: Match[] = [];
 
-    if (mode === 'parejas-fijas') {
-      matches = this.generateWithFixedPairs(players, numberOfRounds);
+    if (mode === 'fixed-pairs') {
+      matches = this.generateWithFixedPairs(players, numberOfRounds, scoringMode);
     } else {
-      matches = this.generateFreeMode(players, numberOfRounds);
+      matches = this.generateFreeMode(players, numberOfRounds, scoringMode);
     }
 
-    // Save configuration and matches
     this.configSubject.next(config);
     this.matchesSubject.next(matches);
     this.saveToLocalStorage(config, matches);
+    this.addToHistory(config, matches);
 
     return matches;
   }
 
-  private generateFreeMode(players: Player[], numberOfRounds: number): Match[] {
+  private generateFreeMode(players: Player[], numberOfRounds: number, scoringMode: ScoringMode): Match[] {
     const matches: Match[] = [];
     const previousPartnerships = new Map<string, Set<number>>();
     const previousOpponents = new Map<string, Set<number>>();
     
-    // Initialize tracking of previous partnerships and opponents
     players.forEach(p => {
       previousPartnerships.set(p.id.toString(), new Set<number>());
       previousOpponents.set(p.id.toString(), new Set<number>());
@@ -70,21 +114,17 @@ export class AmericanoService {
     const matchesPerRound = players.length / 4;
     let globalMatchNumber = 1;
 
-    // Generate rounds
     for (let round = 0; round < numberOfRounds; round++) {
       const availablePlayers = [...players];
       const roundMatches: Match[] = [];
 
-      // Generate matches for this round (all players play simultaneously)
       for (let matchInRound = 0; matchInRound < matchesPerRound; matchInRound++) {
-        // Select 4 players trying to balance positions, play count, and avoid repeated matchups
         const matchPlayers = this.selectBestFourPlayers(
           availablePlayers,
           matchCount,
           previousOpponents
         );
         
-        // Remove selected players from available pool for this round
         matchPlayers.forEach(mp => {
           const index = availablePlayers.findIndex(p => p.id === mp.id);
           if (index > -1) {
@@ -92,7 +132,6 @@ export class AmericanoService {
           }
         });
         
-        // Try to form pairs that haven't played together before and haven't faced each other
         let bestCombination = this.findBestPairCombination(
           matchPlayers,
           previousPartnerships,
@@ -101,14 +140,11 @@ export class AmericanoService {
 
         const [p1, p2, p3, p4] = bestCombination;
 
-        // Register partnerships
         previousPartnerships.get(p1.id.toString())?.add(p2.id);
         previousPartnerships.get(p2.id.toString())?.add(p1.id);
         previousPartnerships.get(p3.id.toString())?.add(p4.id);
         previousPartnerships.get(p4.id.toString())?.add(p3.id);
 
-        // Register opponents (each player vs the two players in the opposite pair)
-        // Pair 1 (p1, p2) vs Pair 2 (p3, p4)
         previousOpponents.get(p1.id.toString())?.add(p3.id);
         previousOpponents.get(p1.id.toString())?.add(p4.id);
         previousOpponents.get(p2.id.toString())?.add(p3.id);
@@ -119,7 +155,6 @@ export class AmericanoService {
         previousOpponents.get(p4.id.toString())?.add(p1.id);
         previousOpponents.get(p4.id.toString())?.add(p2.id);
 
-        // Increment count
         matchPlayers.forEach(p => {
           matchCount.set(p.id, (matchCount.get(p.id) || 0) + 1);
         });
@@ -128,7 +163,9 @@ export class AmericanoService {
           number: globalMatchNumber++,
           round: round + 1,
           pair1: [p1, p2],
-          pair2: [p3, p4]
+          pair2: [p3, p4],
+          scoringMode,
+          sets: []
         });
       }
 
@@ -143,27 +180,21 @@ export class AmericanoService {
     matchCount: Map<number, number>,
     previousOpponents: Map<string, Set<number>>
   ): Player[] {
-    // Sort players by matches played
     const sortedByMatches = [...availablePlayers].sort((a, b) => {
       const countA = matchCount.get(a.id) || 0;
       const countB = matchCount.get(b.id) || 0;
       return countA - countB;
     });
 
-    // If we have 4 or fewer players, return them all
     if (sortedByMatches.length <= 4) {
       return sortedByMatches;
     }
 
-    // Try to get a balanced mix of positions
-    // Priority: players with least matches + balanced positions + avoid repeated opponents
     const candidates = sortedByMatches.slice(0, Math.min(8, sortedByMatches.length));
     
-    // Try different combinations of 4 players from candidates
     let bestGroup: Player[] = candidates.slice(0, 4);
     let bestScore = this.evaluateGroupScore(bestGroup, matchCount, previousOpponents);
 
-    // Only evaluate combinations if we have enough candidates
     if (candidates.length >= 4) {
       for (let i = 0; i < candidates.length - 3; i++) {
         for (let j = i + 1; j < candidates.length - 2; j++) {
@@ -192,16 +223,12 @@ export class AmericanoService {
   ): number {
     let score = 0;
     
-    // 1. Position balance (0-100 points)
     score += this.evaluatePositionBalance(players);
     
-    // 2. Match count variance (0-50 points)
     const matchCounts = players.map(p => matchCount.get(p.id) || 0);
     const variance = Math.max(...matchCounts) - Math.min(...matchCounts);
     score += variance * 5;
     
-    // 3. Previous opponents penalty (0-400 points)
-    // Check how many times these 4 players have faced each other before
     let opponentRepetitions = 0;
     for (let i = 0; i < players.length; i++) {
       for (let j = i + 1; j < players.length; j++) {
@@ -212,7 +239,6 @@ export class AmericanoService {
         }
       }
     }
-    // Each repeated opponent matchup adds 100 points penalty
     score += opponentRepetitions * 100;
     
     return score;
@@ -222,23 +248,20 @@ export class AmericanoService {
     let score = 0;
     const positions = players.map(p => p.position);
     
-    // Count positions
-    const derechaCount = positions.filter(p => p === 'derecha').length;
-    const revesCount = positions.filter(p => p === 'reves').length;
-    const indiferenteCount = positions.filter(p => p === 'indiferente').length;
+    const rightCount = positions.filter(p => p === 'right').length;
+    const backhandCount = positions.filter(p => p === 'backhand').length;
+    const eitherCount = positions.filter(p => p === 'either').length;
     
-    // Ideal: 2 derecha + 2 revés, or mix with indiferente
-    // Worst: 3 or 4 of the same position
-    if (derechaCount === 4 || revesCount === 4) {
-      score += 100; // Very bad: all same position
-    } else if (derechaCount === 3 || revesCount === 3) {
-      score += 50; // Bad: 3 of same position
-    } else if (derechaCount === 2 && revesCount === 2) {
-      score += 0; // Perfect: balanced
-    } else if (indiferenteCount >= 2) {
-      score += 5; // Good: flexible players help balance
+    if (rightCount === 4 || backhandCount === 4) {
+      score += 100;
+    } else if (rightCount === 3 || backhandCount === 3) {
+      score += 50;
+    } else if (rightCount === 2 && backhandCount === 2) {
+      score += 0;
+    } else if (eitherCount >= 2) {
+      score += 5;
     } else {
-      score += 20; // Suboptimal but workable
+      score += 20;
     }
     
     return score;
@@ -249,11 +272,10 @@ export class AmericanoService {
     previousPartnerships: Map<string, Set<number>>,
     previousOpponents: Map<string, Set<number>>
   ): Player[] {
-    // Generate all possible ways to pair 4 players into 2 pairs
     const combinations = [
-      [players[0], players[1], players[2], players[3]], // P1-P2 vs P3-P4
-      [players[0], players[2], players[1], players[3]], // P1-P3 vs P2-P4
-      [players[0], players[3], players[1], players[2]]  // P1-P4 vs P2-P3
+      [players[0], players[1], players[2], players[3]],
+      [players[0], players[2], players[1], players[3]],
+      [players[0], players[3], players[1], players[2]]
     ];
 
     let bestCombination = combinations[0];
@@ -262,34 +284,26 @@ export class AmericanoService {
     for (const combo of combinations) {
       let score = 0;
       
-      // Priority 1: Check if pair 1 has played together (highest priority)
       if (previousPartnerships.get(combo[0].id.toString())?.has(combo[1].id)) {
-        score += 10000; // Very heavy penalty for repeated partnerships
+        score += 10000;
       }
       
-      // Priority 1: Check if pair 2 has played together (highest priority)
       if (previousPartnerships.get(combo[2].id.toString())?.has(combo[3].id)) {
-        score += 10000; // Very heavy penalty for repeated partnerships
+        score += 10000;
       }
 
-      // Priority 2: Check if these pairs have faced each other as opponents before
-      // Pair 1: combo[0] + combo[1] vs Pair 2: combo[2] + combo[3]
       let opponentRepetitions = 0;
       
-      // Check if players in pair 1 have faced players in pair 2
       if (previousOpponents.get(combo[0].id.toString())?.has(combo[2].id)) opponentRepetitions++;
       if (previousOpponents.get(combo[0].id.toString())?.has(combo[3].id)) opponentRepetitions++;
       if (previousOpponents.get(combo[1].id.toString())?.has(combo[2].id)) opponentRepetitions++;
       if (previousOpponents.get(combo[1].id.toString())?.has(combo[3].id)) opponentRepetitions++;
       
-      // Each repeated opponent adds significant penalty (but less than repeated partnership)
       score += opponentRepetitions * 1000;
 
-      // Priority 3: Check position compatibility for pair 1 (lower priority)
       const pair1Score = this.evaluatePairPositions(combo[0], combo[1]);
       score += pair1Score;
       
-      // Priority 3: Check position compatibility for pair 2 (lower priority)
       const pair2Score = this.evaluatePairPositions(combo[2], combo[3]);
       score += pair2Score;
 
@@ -306,34 +320,29 @@ export class AmericanoService {
     const pos1 = player1.position;
     const pos2 = player2.position;
     
-    // Best case: one derecha and one reves (complementary)
-    if ((pos1 === 'derecha' && pos2 === 'reves') || 
-        (pos1 === 'reves' && pos2 === 'derecha')) {
-      return 0; // Perfect match
+    if ((pos1 === 'right' && pos2 === 'backhand') || 
+        (pos1 === 'backhand' && pos2 === 'right')) {
+      return 0;
     }
     
-    // Both indiferente (very flexible)
-    if (pos1 === 'indiferente' && pos2 === 'indiferente') {
-      return 3; // Very flexible, slightly better than one indiferente
+    if (pos1 === 'either' && pos2 === 'either') {
+      return 3;
     }
     
-    // One is indiferente (flexible)
-    if (pos1 === 'indiferente' || pos2 === 'indiferente') {
-      return 5; // Flexible, good
+    if (pos1 === 'either' || pos2 === 'either') {
+      return 5;
     }
     
-    // Worst case: both same position (derecha-derecha or reves-reves)
     if (pos1 === pos2) {
-      return 100; // High penalty for same position
+      return 100;
     }
     
-    return 10; // Default penalty (shouldn't reach here)
+    return 10;
   }
 
-  private generateWithFixedPairs(players: Player[], numberOfRounds: number): Match[] {
+  private generateWithFixedPairs(players: Player[], numberOfRounds: number, scoringMode: ScoringMode): Match[] {
     const matches: Match[] = [];
     
-    // Group players by pairs
     const fixedPairs = new Map<number, Player[]>();
     const freePlayers: Player[] = [];
 
@@ -348,7 +357,6 @@ export class AmericanoService {
       }
     });
 
-    // Convert pairs to array
     const pairs: [Player, Player][] = [];
     fixedPairs.forEach((pairPlayers) => {
       if (pairPlayers.length === 2) {
@@ -356,7 +364,6 @@ export class AmericanoService {
       }
     });
 
-    // Form pairs with free players
     for (let i = 0; i < freePlayers.length; i += 2) {
       if (i + 1 < freePlayers.length) {
         pairs.push([freePlayers[i], freePlayers[i + 1]]);
@@ -373,7 +380,6 @@ export class AmericanoService {
       throw new Error('El número de parejas debe ser par para generar rondas completas');
     }
 
-    // Generate matches rotating pairs
     const previousMatchups = new Map<string, Set<string>>();
     pairs.forEach((_, idx) => {
       previousMatchups.set(idx.toString(), new Set<string>());
@@ -384,13 +390,11 @@ export class AmericanoService {
     for (let round = 0; round < numberOfRounds; round++) {
       const availablePairs = [...Array(pairs.length).keys()];
       
-      // Generate matches for this round
       for (let matchInRound = 0; matchInRound < matchesPerRound; matchInRound++) {
         let pair1Idx = -1;
         let pair2Idx = -1;
         let fewestMatchups = Number.MAX_SAFE_INTEGER;
 
-        // Find the best pair combination that hasn't played or has played the least
         for (let i = 0; i < availablePairs.length; i++) {
           for (let j = i + 1; j < availablePairs.length; j++) {
             const p1 = availablePairs[i];
@@ -410,21 +414,18 @@ export class AmericanoService {
           }
         }
 
-        // If no new combination found, take the first available
         if (pair1Idx === -1 && availablePairs.length >= 2) {
           pair1Idx = availablePairs[0];
           pair2Idx = availablePairs[1];
         }
 
         if (pair1Idx === -1 || pair2Idx === -1) {
-          break; // No more pairs available for this round
+          break;
         }
 
-        // Register matchup
         previousMatchups.get(pair1Idx.toString())?.add(pair2Idx.toString());
         previousMatchups.get(pair2Idx.toString())?.add(pair1Idx.toString());
 
-        // Remove used pairs from available pool for this round
         availablePairs.splice(availablePairs.indexOf(pair1Idx), 1);
         availablePairs.splice(availablePairs.indexOf(pair2Idx), 1);
 
@@ -432,7 +433,9 @@ export class AmericanoService {
           number: globalMatchNumber++,
           round: round + 1,
           pair1: pairs[pair1Idx],
-          pair2: pairs[pair2Idx]
+          pair2: pairs[pair2Idx],
+          scoringMode,
+          sets: []
         });
       }
     }
@@ -441,9 +444,8 @@ export class AmericanoService {
   }
 
   generateSummary(matches: Match[]): string {
-    let summary = '🏓 AMERICANO DE PÁDEL 🏓\n\n';
-    
-    // Group matches by round
+    const lines: string[] = [];
+
     const matchesByRound = new Map<number, Match[]>();
     matches.forEach(match => {
       if (!matchesByRound.has(match.round)) {
@@ -451,78 +453,160 @@ export class AmericanoService {
       }
       matchesByRound.get(match.round)?.push(match);
     });
-    
-    // Sort rounds
+
     const rounds = Array.from(matchesByRound.keys()).sort((a, b) => a - b);
-    
-    // Generate summary by rounds
+
     rounds.forEach(roundNumber => {
       const roundMatches = matchesByRound.get(roundNumber) || [];
-      summary += `━━━ RONDA ${roundNumber} ━━━\n`;
-      summary += `(${roundMatches.length} partido(s) simultáneo(s))\n\n`;
-      
+      lines.push(`━━━ RONDA ${roundNumber} ━━━`);
+      lines.push(`(${roundMatches.length} partido(s) simultáneo(s))\n`);
+
       roundMatches.forEach(match => {
         const [p1, p2] = match.pair1;
         const [p3, p4] = match.pair2;
-        
+
         let line = `Partido ${match.number}: [${p1.name}, ${p2.name}] vs [${p3.name}, ${p4.name}]`;
-        
-        if (match.scorePair1 !== undefined && match.scorePair2 !== undefined) {
-          line += ` - ${match.scorePair1}:${match.scorePair2}`;
+
+        if (match.scoringMode === 'sets' && match.sets.length > 0) {
+          const setStr = match.sets
+            .filter(s => s.pair1Games >= 0 && s.pair2Games >= 0)
+            .map(s => `${s.pair1Games}-${s.pair2Games}`)
+            .join(', ');
+          if (setStr) line += ` — ${setStr}`;
+        } else if (match.scorePair1 !== undefined && match.scorePair2 !== undefined) {
+          line += ` — ${match.scorePair1}:${match.scorePair2}`;
         }
-        
-        summary += line + '\n';
+
+        lines.push(line);
       });
-      
-      summary += '\n';
+
+      lines.push('');
     });
 
-    return summary;
+    return lines.join('\n');
   }
 
   updateScore(matchNumber: number, scorePair1: number, scorePair2: number): void {
     const matches = this.matchesSubject.value;
     const match = matches.find(m => m.number === matchNumber);
-    
-    if (match) {
-      match.scorePair1 = scorePair1;
-      match.scorePair2 = scorePair2;
-      this.matchesSubject.next([...matches]);
-      
-      const config = this.configSubject.value;
-      if (config) {
-        this.saveToLocalStorage(config, matches);
-      }
+
+    if (!match) return;
+
+    match.scorePair1 = scorePair1;
+    match.scorePair2 = scorePair2;
+    match.completed = true;
+    match.winner = scorePair1 > scorePair2 ? 'pair1' : 'pair2';
+    this.matchesSubject.next([...matches]);
+
+    const config = this.configSubject.value;
+    if (config) {
+      this.saveToLocalStorage(config, matches);
+    }
+  }
+
+  updateSetScores(matchNumber: number, sets: SetScore[]): void {
+    const matches = this.matchesSubject.value;
+    const match = matches.find(m => m.number === matchNumber);
+
+    if (!match) return;
+
+    match.sets = sets;
+    match.completed = false;
+    match.winner = undefined;
+
+    let pair1Sets = 0;
+    let pair2Sets = 0;
+
+    for (const set of sets) {
+      const w = getSetWinner(set);
+      if (w === 'pair1') pair1Sets++;
+      else if (w === 'pair2') pair2Sets++;
+    }
+
+    if (pair1Sets >= 2 || pair2Sets >= 2) {
+      match.completed = true;
+      match.winner = pair1Sets > pair2Sets ? 'pair1' : 'pair2';
+    }
+
+    this.matchesSubject.next([...matches]);
+
+    const config = this.configSubject.value;
+    if (config) {
+      this.saveToLocalStorage(config, matches);
     }
   }
 
   calculateStatistics(): PlayerStats[] {
     const matches = this.matchesSubject.value;
     const config = this.configSubject.value;
-    
+
     if (!config) return [];
 
     const statistics = new Map<number, PlayerStats>();
 
-    // Initialize statistics
     config.players.forEach(player => {
       statistics.set(player.id, {
         player,
         matchesPlayed: 0,
         matchesWon: 0,
+        setsWon: 0,
+        setsLost: 0,
         pointsFor: 0,
         pointsAgainst: 0,
         difference: 0
       });
     });
 
-    // Calculate statistics for each match
     matches.forEach(match => {
-      if (match.scorePair1 !== undefined && match.scorePair2 !== undefined) {
+      if (match.scoringMode === 'sets' && match.sets.length > 0) {
+        const [p1, p2] = match.pair1;
+        const [p3, p4] = match.pair2;
+        const stats1_1 = statistics.get(p1.id)!;
+        const stats1_2 = statistics.get(p2.id)!;
+        const stats2_1 = statistics.get(p3.id)!;
+        const stats2_2 = statistics.get(p4.id)!;
+
+        stats1_1.matchesPlayed++;
+        stats1_2.matchesPlayed++;
+        stats2_1.matchesPlayed++;
+        stats2_2.matchesPlayed++;
+
+        let pair1Sets = 0, pair2Sets = 0;
+        for (const set of match.sets) {
+          stats1_1.pointsFor += set.pair1Games;
+          stats1_2.pointsFor += set.pair1Games;
+          stats1_1.pointsAgainst += set.pair2Games;
+          stats1_2.pointsAgainst += set.pair2Games;
+          stats2_1.pointsFor += set.pair2Games;
+          stats2_2.pointsFor += set.pair2Games;
+          stats2_1.pointsAgainst += set.pair1Games;
+          stats2_2.pointsAgainst += set.pair1Games;
+
+          const w = getSetWinner(set);
+          if (w === 'pair1') pair1Sets++;
+          else if (w === 'pair2') pair2Sets++;
+        }
+
+        stats1_1.setsWon += pair1Sets;
+        stats1_2.setsWon += pair1Sets;
+        stats1_1.setsLost += pair2Sets;
+        stats1_2.setsLost += pair2Sets;
+        stats2_1.setsWon += pair2Sets;
+        stats2_2.setsWon += pair2Sets;
+        stats2_1.setsLost += pair1Sets;
+        stats2_2.setsLost += pair1Sets;
+
+        if (pair1Sets > pair2Sets) {
+          stats1_1.matchesWon++;
+          stats1_2.matchesWon++;
+        } else if (pair2Sets > pair1Sets) {
+          stats2_1.matchesWon++;
+          stats2_2.matchesWon++;
+        }
+      } else if (match.scorePair1 !== undefined && match.scorePair2 !== undefined) {
         const [p1, p2] = match.pair1;
         const [p3, p4] = match.pair2;
 
-        // Update pair 1
         const stats1_1 = statistics.get(p1.id)!;
         const stats1_2 = statistics.get(p2.id)!;
         stats1_1.matchesPlayed++;
@@ -532,7 +616,6 @@ export class AmericanoService {
         stats1_1.pointsAgainst += match.scorePair2;
         stats1_2.pointsAgainst += match.scorePair2;
 
-        // Update pair 2
         const stats2_1 = statistics.get(p3.id)!;
         const stats2_2 = statistics.get(p4.id)!;
         stats2_1.matchesPlayed++;
@@ -542,7 +625,6 @@ export class AmericanoService {
         stats2_1.pointsAgainst += match.scorePair1;
         stats2_2.pointsAgainst += match.scorePair1;
 
-        // Determine winners
         if (match.scorePair1 > match.scorePair2) {
           stats1_1.matchesWon++;
           stats1_2.matchesWon++;
@@ -553,16 +635,13 @@ export class AmericanoService {
       }
     });
 
-    // Calculate differences
     statistics.forEach(stats => {
       stats.difference = stats.pointsFor - stats.pointsAgainst;
     });
 
-    // Sort by matches won and difference
     return Array.from(statistics.values()).sort((a, b) => {
-      if (b.matchesWon !== a.matchesWon) {
-        return b.matchesWon - a.matchesWon;
-      }
+      if (b.matchesWon !== a.matchesWon) return b.matchesWon - a.matchesWon;
+      if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
       return b.difference - a.difference;
     });
   }
@@ -580,18 +659,93 @@ export class AmericanoService {
     try {
       const configStr = localStorage.getItem(this.STORAGE_KEY);
       const matchesStr = localStorage.getItem(this.MATCHES_KEY);
-      
+
       if (configStr) {
-        const config = JSON.parse(configStr);
+        const config = JSON.parse(configStr) as TournamentConfig;
+        if (!config.scoringMode) config.scoringMode = 'points';
         this.configSubject.next(config);
       }
-      
+
       if (matchesStr) {
-        const matches = JSON.parse(matchesStr);
-        this.matchesSubject.next(matches);
+        const matches = JSON.parse(matchesStr) as Match[];
+        this.matchesSubject.next(matches.map(m => this.migrateMatch(m)));
       }
+
+      const history = this.loadHistory().map(r => ({
+        ...r,
+        config: { ...r.config, scoringMode: r.config.scoringMode ?? 'points' },
+        matches: r.matches.map(m => this.migrateMatch(m))
+      }));
+      this.historySubject.next(history);
     } catch (error) {
       console.error('Error loading from localStorage:', error);
+    }
+  }
+
+  private migrateMatch(m: Match): Match {
+    return {
+      ...m,
+      scoringMode: (m as any).scoringMode ?? 'points',
+      sets: (m as any).sets ?? [],
+      completed: (m as any).completed ?? false,
+      winner: (m as any).winner ?? undefined
+    };
+  }
+
+  private addToHistory(config: TournamentConfig, matches: Match[]): void {
+    const history = this.loadHistory();
+    const record: TournamentRecord = {
+      id: crypto.randomUUID?.() ?? Date.now().toString(36),
+      createdAt: new Date().toISOString(),
+      label: `Americano ${config.players.length} jugs · ${new Date().toLocaleDateString()}`,
+      config,
+      matches
+    };
+    history.unshift(record);
+    if (history.length > 20) history.pop();
+    this.saveHistory(history);
+    this.historySubject.next(history);
+  }
+
+  getHistory(): TournamentRecord[] {
+    return this.loadHistory();
+  }
+
+  loadTournament(recordId: string): TournamentRecord | null {
+    const history = this.loadHistory().map(r => ({
+      ...r,
+      config: { ...r.config, scoringMode: r.config.scoringMode ?? 'points' },
+      matches: r.matches.map(m => this.migrateMatch(m))
+    }));
+    const record = history.find(r => r.id === recordId) ?? null;
+    if (record) {
+      this.configSubject.next(record.config);
+      this.matchesSubject.next(record.matches);
+      this.saveToLocalStorage(record.config, record.matches);
+    }
+    return record;
+  }
+
+  deleteHistoryRecord(recordId: string): void {
+    const history = this.loadHistory().filter(r => r.id !== recordId);
+    this.saveHistory(history);
+    this.historySubject.next(history);
+  }
+
+  private loadHistory(): TournamentRecord[] {
+    try {
+      const raw = localStorage.getItem(this.HISTORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveHistory(history: TournamentRecord[]): void {
+    try {
+      localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
+    } catch (error) {
+      console.error('Error saving history:', error);
     }
   }
 
@@ -602,4 +756,3 @@ export class AmericanoService {
     this.matchesSubject.next([]);
   }
 }
-

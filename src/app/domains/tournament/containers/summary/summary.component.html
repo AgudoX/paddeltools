@@ -1,0 +1,232 @@
+<div class="summary-container">
+  <div class="summary-card">
+    <div class="header">
+      <h1 class="main-title"><mat-icon>emoji_events</mat-icon> Resumen del Americano</h1>
+      <app-primary-button variant="outline-dark" icon="arrow_back" (clicked)="backToForm()">
+        Volver a Configuración
+      </app-primary-button>
+    </div>
+
+    @if (showSnackbar()) {
+      <app-snackbar [message]="snackbarMessage()" [type]="snackbarType()" (dismissed)="dismissSnackbar()" />
+    }
+
+    <div class="actions-container">
+      <app-primary-button variant="primary" icon="content_copy" (clicked)="copySummary()">
+        Copiar Resumen
+      </app-primary-button>
+      <app-primary-button variant="success" icon="chat" (clicked)="shareWhatsApp()">
+        Compartir por WhatsApp
+      </app-primary-button>
+      <app-primary-button variant="info" icon="bar_chart" (clicked)="toggleStatistics()">
+        {{ showStatistics ? 'Ocultar' : 'Ver' }} Ranking
+      </app-primary-button>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Partidos por Rondas</h2>
+      <div class="rounds-container">
+        @for (roundNumber of rounds; track trackRound(roundNumber)) {
+          <div class="round-section">
+            <h3 class="round-title">
+              Ronda {{ roundNumber }}
+              <span class="round-info">({{ matchesByRound.get(roundNumber)?.length }} partido(s))</span>
+            </h3>
+            <div class="matches-grid">
+              @for (match of matchesByRound.get(roundNumber); track trackMatch($index, match)) {
+                <div class="match-card">
+                  <div class="match-header">
+                    <span class="match-number">Partido {{ match.number }}</span>
+                    @if (editingMatch !== match.number) {
+                      <app-primary-button variant="primary" (clicked)="editScore(match.number)">
+                        Puntuar
+                      </app-primary-button>
+                    }
+                  </div>
+
+                  <div class="match-body">
+                    <!-- Pair 1 -->
+                    <div class="pair"
+                      [class.winner]="match.scoringMode === 'points' && hasWinner(match) && (match.scorePair1 ?? 0) > (match.scorePair2 ?? 0)">
+                      <div class="pair-players">
+                        <span class="player-name">{{ match.pair1[0].name }}</span>
+                        <span class="player-position">({{ match.pair1[0].position }})</span>
+                        <span class="separator">&</span>
+                        <span class="player-name">{{ match.pair1[1].name }}</span>
+                        <span class="player-position">({{ match.pair1[1].position }})</span>
+                      </div>
+
+                      @if (editingMatch !== match.number) {
+                        @if (match.scoringMode === 'sets') {
+                          <div class="sets-display">
+                            @for (set of match.sets; track trackSet($index)) {
+                              <span class="set-score-badge"
+                                [class.set-won]="set.pair1Games > set.pair2Games && isSetComplete(set)"
+                                [class.set-lost]="set.pair2Games > set.pair1Games && isSetComplete(set)">
+                                {{ set.pair1Games }}
+                              </span>
+                            }
+                            @if (match.sets.length === 0) {
+                              <span class="sets-empty">-</span>
+                            }
+                          </div>
+                        } @else {
+                          <div class="score">
+                            @if (match.scorePair1 !== undefined) {
+                              <span class="points">{{ match.scorePair1 }}</span>
+                            }
+                          </div>
+                        }
+                      }
+
+                      @if (editingMatch === match.number && match.scoringMode === 'points') {
+                        <input type="number" [(ngModel)]="match.scorePair1" class="score-input" min="0" placeholder="0" />
+                      }
+                    </div>
+
+                    <div class="vs">VS</div>
+
+                    <!-- Pair 2 -->
+                    <div class="pair"
+                      [class.winner]="match.scoringMode === 'points' && hasWinner(match) && (match.scorePair2 ?? 0) > (match.scorePair1 ?? 0)">
+                      <div class="pair-players">
+                        <span class="player-name">{{ match.pair2[0].name }}</span>
+                        <span class="player-position">({{ match.pair2[0].position }})</span>
+                        <span class="separator">&</span>
+                        <span class="player-name">{{ match.pair2[1].name }}</span>
+                        <span class="player-position">({{ match.pair2[1].position }})</span>
+                      </div>
+
+                      @if (editingMatch !== match.number) {
+                        @if (match.scoringMode === 'sets') {
+                          <div class="sets-display">
+                            @for (set of match.sets; track trackSet($index)) {
+                              <span class="set-score-badge"
+                                [class.set-won]="set.pair2Games > set.pair1Games && isSetComplete(set)"
+                                [class.set-lost]="set.pair1Games > set.pair2Games && isSetComplete(set)">
+                                {{ set.pair2Games }}
+                              </span>
+                            }
+                            @if (match.sets.length === 0) {
+                              <span class="sets-empty">-</span>
+                            }
+                          </div>
+                        } @else {
+                          <div class="score">
+                            @if (match.scorePair2 !== undefined) {
+                              <span class="points">{{ match.scorePair2 }}</span>
+                            }
+                          </div>
+                        }
+                      }
+
+                      @if (editingMatch === match.number && match.scoringMode === 'points') {
+                        <input type="number" [(ngModel)]="match.scorePair2" class="score-input" min="0" placeholder="0" />
+                      }
+                    </div>
+
+                    <!-- Set editing (only in sets mode) -->
+                    @if (editingMatch === match.number && match.scoringMode === 'sets') {
+                      <div class="sets-editor">
+                        @for (setIdx of [0,1,2]; track setIdx) {
+                          <div class="set-editor-col">
+                            <span class="set-editor-label">S{{ setIdx + 1 }}</span>
+                            <div class="set-editor-inputs">
+                              <input
+                                type="number"
+                                [(ngModel)]="match.sets[setIdx].pair1Games"
+                                class="set-input"
+                                min="0"
+                                placeholder="0"
+                              />
+                              <span class="set-dash">-</span>
+                              <input
+                                type="number"
+                                [(ngModel)]="match.sets[setIdx].pair2Games"
+                                class="set-input"
+                                min="0"
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Winner banner -->
+                  @if (hasWinner(match)) {
+                    <div class="winner-banner">
+                      <mat-icon>emoji_events</mat-icon>
+                      Ganadores: {{ getWinners(match) }}
+                      @if (getMatchScoreDisplay(match); as score) {
+                        <span class="winner-score">({{ score }})</span>
+                      }
+                    </div>
+                  }
+
+                  <!-- Edit buttons -->
+                  @if (editingMatch === match.number) {
+                    <div class="edit-buttons">
+                      <app-primary-button variant="success" icon="save" (clicked)="saveScore(match)">
+                        Guardar
+                      </app-primary-button>
+                      <app-primary-button variant="danger" (clicked)="cancelEdit()">
+                        Cancelar
+                      </app-primary-button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (showStatistics && statistics.length > 0) {
+      <div class="section" #statisticsSection>
+        <h2 class="section-title"><mat-icon>military_tech</mat-icon> Clasificación</h2>
+        <div class="table-responsive">
+          <table class="statistics-table">
+            <thead>
+              <tr>
+                <th>Pos</th>
+                <th>Jugador</th>
+                <th>Jug.</th>
+                <th>Gan.</th>
+                <th>Sets G</th>
+                <th>Sets P</th>
+                <th>PF</th>
+                <th>PC</th>
+                <th>Dif</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (stats of statistics; track stats; let i = $index) {
+                <tr [class.top-3]="i < 3">
+                  <td class="rank">
+                    @if (i === 0) { <mat-icon>emoji_events</mat-icon> }
+                    @else if (i === 1) { <mat-icon>workspace_premium</mat-icon> }
+                    @else if (i === 2) { <mat-icon>stars</mat-icon> }
+                    @else { <span>{{ i + 1 }}</span> }
+                  </td>
+                  <td class="name">{{ stats.player.name }}</td>
+                  <td>{{ stats.matchesPlayed }}</td>
+                  <td class="highlighted">{{ stats.matchesWon }}</td>
+                  <td>{{ stats.setsWon }}</td>
+                  <td>{{ stats.setsLost }}</td>
+                  <td>{{ stats.pointsFor }}</td>
+                  <td>{{ stats.pointsAgainst }}</td>
+                  <td [class.positive]="stats.difference > 0" [class.negative]="stats.difference < 0">
+                    {{ stats.difference > 0 ? '+' : '' }}{{ stats.difference }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+</div>

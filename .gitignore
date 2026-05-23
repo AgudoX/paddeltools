@@ -27,6 +27,7 @@ out-tsc/
 .cursorrules.yml
 .cursorrules.yaml
 .opencode/
+.agents
 
 *.log
 *.tsbuildinfo
