@@ -4,15 +4,15 @@ export const tournamentRoutes: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./containers/player-form/player-form.component').then(
-        (m) => m.PlayerFormComponent
+      import('./containers/player-form-page/player-form-page.component').then(
+        (m) => m.PlayerFormPageComponent
       ),
   },
   {
     path: 'tournament/:id',
     loadComponent: () =>
-      import('./containers/summary/summary.component').then(
-        (m) => m.SummaryComponent
+      import('./containers/summary-page/summary-page.component').then(
+        (m) => m.SummaryPageComponent
       ),
   },
   {
@@ -23,15 +23,15 @@ export const tournamentRoutes: Routes = [
   {
     path: 'history',
     loadComponent: () =>
-      import('./containers/history/history.component').then(
-        (m) => m.HistoryComponent
+      import('./containers/history-page/history-page.component').then(
+        (m) => m.HistoryPageComponent
       ),
   },
   {
     path: 'history/:id',
     loadComponent: () =>
-      import('./containers/history-detail/history-detail.component').then(
-        (m) => m.HistoryDetailComponent
+      import('./containers/history-detail-page/history-detail-page.component').then(
+        (m) => m.HistoryDetailPageComponent
       ),
   },
 ];

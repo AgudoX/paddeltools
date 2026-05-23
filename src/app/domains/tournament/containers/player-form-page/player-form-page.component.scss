@@ -57,8 +57,7 @@
 .hero-title {
   font-family: var(--font-thunder);
   font-size: 54px;
-  font-weight: var(--font-weight-extrabold);
-  color: var(--on-dark);
+  font-weight: 800;
   margin: 0;
   letter-spacing: -1px;
   line-height: 0.9;
@@ -190,6 +189,27 @@
   font-size: var(--font-size-sm);
   margin-top: 6px;
   font-family: var(--font-jakarta);
+}
+
+.input-error {
+  border-color: var(--accent-red) !important;
+  box-shadow: 0 0 0 1px var(--accent-red) !important;
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-red);
+  font-size: var(--font-size-sm);
+  margin-top: 6px;
+  font-family: var(--font-jakarta);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .scoring-toggle {

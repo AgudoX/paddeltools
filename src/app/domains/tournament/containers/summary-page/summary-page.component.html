@@ -7,10 +7,6 @@
       </app-primary-button>
     </div>
 
-    @if (showSnackbar()) {
-      <app-snackbar [message]="snackbarMessage()" [type]="snackbarType()" (dismissed)="dismissSnackbar()" />
-    }
-
     <div class="actions-container">
       <app-primary-button variant="primary" icon="content_copy" (clicked)="copySummary()">
         Copiar Resumen

@@ -1,0 +1,28 @@
+.neon-title {
+  font-size: 64px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--primary);
+  letter-spacing: -1px;
+  padding: 20px;
+  display: inline-block;
+  text-shadow:
+    0 0 8px rgba(204, 255, 0, 0.3),
+    0 0 20px rgba(204, 255, 0, 0.2),
+    0 0 40px rgba(204, 255, 0, 0.1);
+  animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  0% {
+    text-shadow:
+      0 0 8px rgba(204, 255, 0, 0.3),
+      0 0 20px rgba(204, 255, 0, 0.2);
+  }
+  100% {
+    text-shadow:
+      0 0 12px rgba(204, 255, 0, 0.6),
+      0 0 30px rgba(204, 255, 0, 0.4),
+      0 0 50px rgba(204, 255, 0, 0.2);
+  }
+}

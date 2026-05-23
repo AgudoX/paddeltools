@@ -34,6 +34,21 @@ describe('PairCardComponent', () => {
     expect(inputs[1].value).toBe('Pablo');
   });
 
+   it('emits pairChange on player 1 name edit', () => {
+    const spy = vi.fn();
+    component.pairChange.subscribe(spy);
+
+    const inputs: HTMLInputElement[] = fixture.nativeElement.querySelectorAll('input');
+    inputs[0].value = 'Carlos';
+    inputs[0].dispatchEvent(new Event('input'));
+
+    expect(spy).toHaveBeenCalledWith({
+      pairId: 1,
+      playerId: 1,
+      name: 'Carlos',
+    });
+  });
+
   it('emits pairChange on player 2 name edit', () => {
     const spy = vi.fn();
     component.pairChange.subscribe(spy);
@@ -49,7 +64,7 @@ describe('PairCardComponent', () => {
     });
   });
 
-  it('emits pairChange on position change', () => {
+  it('emits pairChange on player 1 position change', () => {
     const spy = vi.fn();
     component.pairChange.subscribe(spy);
 
@@ -61,6 +76,21 @@ describe('PairCardComponent', () => {
       pairId: 1,
       playerId: 1,
       position: 'backhand',
+    });
+  });
+
+  it('emits pairChange on player 2 position change', () => {
+    const spy = vi.fn();
+    component.pairChange.subscribe(spy);
+
+    const selects: HTMLSelectElement[] = fixture.nativeElement.querySelectorAll('select');
+    selects[1].value = 'right';
+    selects[1].dispatchEvent(new Event('change'));
+
+    expect(spy).toHaveBeenCalledWith({
+      pairId: 1,
+      playerId: 2,
+      position: 'right',
     });
   });
 });

@@ -10,11 +10,12 @@ import { Router } from "@angular/router";
 import { MatIconModule } from "@angular/material/icon";
 import { TournamentFacade } from "@domain/tournament/data-access/tournament.facade";
 import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
+import { PadelCraftLogoComponent } from "@shared/components/padelcraft-logo/padelcraft-logo.component";
 
 @Component({
-  selector: "app-history",
+  selector: "app-history-page",
   standalone: true,
-  imports: [CommonModule, MatIconModule, PrimaryButtonComponent],
+  imports: [CommonModule, MatIconModule, PrimaryButtonComponent, PadelCraftLogoComponent],
   template: `
     <div class="history-container">
       <div class="history-card">
@@ -32,10 +33,10 @@ import { PrimaryButtonComponent } from "@shared/components/primary-button/primar
         </div>
 
         @let records = facade.history();
-        @if (records.length === 0) {
-          <div class="empty-state">
-            <mat-icon class="empty-icon">sports_tennis</mat-icon>
-            <p>Aún no hay torneos guardados.</p>
+         @if (records.length === 0) {
+           <div class="empty-state">
+             <app-padelcraft-logo class="empty-icon" [size]="80" />
+             <p>Aún no hay torneos guardados.</p>
             <app-primary-button
               variant="primary"
               icon="add"
@@ -115,10 +116,10 @@ import { PrimaryButtonComponent } from "@shared/components/primary-button/primar
       </div>
     </div>
   `,
-  styleUrl: "./history.component.scss",
+  styleUrl: "./history-page.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HistoryComponent {
+export class HistoryPageComponent {
   protected readonly facade = inject(TournamentFacade);
   private readonly router = inject(Router);
 

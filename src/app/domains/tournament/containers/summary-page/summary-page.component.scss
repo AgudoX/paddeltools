@@ -577,6 +577,66 @@
   @media (min-width: 640px) { width: 80px; }
 }
 
+@media (max-width: 639px) {
+  .podium {
+    gap: 8px;
+    padding: 0 2px;
+    margin-bottom: 20px;
+  }
+
+  .podium-slot {
+    &.first {
+      .podium-card { min-width: 118px; }
+      .podium-bar { height: 62px; }
+    }
+
+    &.second {
+      .podium-card { min-width: 100px; }
+      .podium-bar { height: 44px; }
+    }
+
+    &.third {
+      .podium-card { min-width: 100px; }
+      .podium-bar { height: 34px; }
+    }
+  }
+
+  .podium-crown {
+    top: -14px;
+    font-size: 22px;
+  }
+
+  .podium-card {
+    padding: 14px 10px 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .podium-medal {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+
+  .podium-name {
+    font-size: 13px;
+    max-width: 108px;
+  }
+
+  .podium-record {
+    font-size: 11px;
+  }
+
+  .podium-diff {
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .podium-pos-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+}
+
 .ranking-table-wrap {
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-md); border: 1px solid var(--hairline-dark);

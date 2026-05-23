@@ -3,7 +3,6 @@ import {
   OnInit,
   inject,
   ChangeDetectionStrategy,
-  signal,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -17,13 +16,11 @@ import {
   TournamentConfig,
 } from "@shared/models/player.model";
 import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
-import {
-  SnackbarComponent,
-  SnackbarType,
-} from "@shared/components/snackbar/snackbar.component";
 import { PlayerCardComponent } from "@domain/tournament/components/player-card/player-card.component";
 import { PairCardComponent } from "@domain/tournament/components/pair-card/pair-card.component";
 import { NeonCounterComponent } from "@shared/components/neon-counter/neon-counter.component";
+import { PadelCraftLogoComponent } from "@shared/components/padelcraft-logo/padelcraft-logo.component";
+import { NotificationService } from "@shared/services/notification.service";
 
 interface PairForm {
   id: number;
@@ -32,25 +29,26 @@ interface PairForm {
 }
 
 @Component({
-  selector: "app-player-form",
+  selector: "app-player-form-page",
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
     MatIconModule,
     PrimaryButtonComponent,
-    SnackbarComponent,
     PlayerCardComponent,
     PairCardComponent,
     NeonCounterComponent,
+    PadelCraftLogoComponent,
   ],
-  templateUrl: "./player-form.component.html",
-  styleUrl: "./player-form.component.scss",
+  templateUrl: "./player-form-page.component.html",
+  styleUrl: "./player-form-page.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PlayerFormComponent implements OnInit {
+export class PlayerFormPageComponent implements OnInit {
   private readonly facade = inject(TournamentFacade);
   private readonly router = inject(Router);
+  private readonly notifications = inject(NotificationService);
 
   tournamentName = "";
   numberOfPlayers = 8;
@@ -61,15 +59,11 @@ export class PlayerFormComponent implements OnInit {
   pairs: PairForm[] = [];
   errors: string[] = [];
   loading = false;
-  snackbarMessage = signal("");
-  snackbarType = signal<SnackbarType>("success");
-  showSnackbar = signal(false);
-  private snackbarTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     const config = this.facade.config();
     if (config) {
-      this.tournamentName = config.name ?? "";
+      this.tournamentName = "";
       this.numberOfPlayers = config.numberOfPlayers;
       this.numberOfRounds = config.numberOfRounds;
       this.mode = config.mode;
@@ -250,6 +244,13 @@ export class PlayerFormComponent implements OnInit {
     if (change.position !== undefined) player.position = change.position;
   }
 
+  protected duplicateName(): boolean {
+    const name = this.tournamentName.trim();
+    return !!name && this.facade.history().some(
+      (r) => r.label.toLowerCase() === name.toLowerCase()
+    );
+  }
+
   validate(): boolean {
     this.errors = [];
 
@@ -263,6 +264,10 @@ export class PlayerFormComponent implements OnInit {
 
     if (this.numberOfRounds < 1) {
       this.errors.push("Debe haber al menos 1 ronda");
+    }
+
+    if (this.duplicateName()) {
+      this.errors.push("Ya existe un torneo guardado con ese nombre");
     }
 
     const emptyNames = this.players.filter((p) => !p.name.trim());
@@ -333,21 +338,6 @@ export class PlayerFormComponent implements OnInit {
     this.router.navigate(["/history"]);
   }
 
-  protected showSnack(message: string, type: SnackbarType): void {
-    if (this.snackbarTimer) clearTimeout(this.snackbarTimer);
-    this.snackbarMessage.set(message);
-    this.snackbarType.set(type);
-    this.showSnackbar.set(true);
-    this.snackbarTimer = setTimeout(() => {
-      this.showSnackbar.set(false);
-    }, 5000);
-  }
-
-  protected dismissSnackbar(): void {
-    if (this.snackbarTimer) clearTimeout(this.snackbarTimer);
-    this.showSnackbar.set(false);
-  }
-
   clear(): void {
     if (confirm("¿Estás seguro de que quieres limpiar todos los datos?")) {
       this.facade.clearData();
@@ -359,6 +349,7 @@ export class PlayerFormComponent implements OnInit {
       this.pairs = [];
       this.errors = [];
       this.updateNumberOfPlayers();
+      this.notifications.showSuccess("Datos limpiados correctamente");
     }
   }
 }

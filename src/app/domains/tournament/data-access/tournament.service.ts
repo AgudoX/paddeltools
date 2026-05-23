@@ -1,4 +1,4 @@
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import { BehaviorSubject, Observable } from "rxjs";
 import {
   Player,
@@ -9,6 +9,7 @@ import {
   TournamentRecord,
   ScoringMode,
 } from "@shared/models/player.model";
+import { NotificationService } from "@shared/services/notification.service";
 
 /* ─── Scoring utilities (pure functions) ─── */
 
@@ -72,6 +73,8 @@ export class TournamentService {
     this.configSubject.asObservable();
   matches$: Observable<Match[]> = this.matchesSubject.asObservable();
   history$: Observable<TournamentRecord[]> = this.historySubject.asObservable();
+
+  private readonly notificationService = inject(NotificationService);
 
   constructor() {
     this.loadFromLocalStorage();
@@ -825,8 +828,8 @@ export class TournamentService {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(config));
       localStorage.setItem(this.MATCHES_KEY, JSON.stringify(matches));
-    } catch (error) {
-      console.error("Error saving to localStorage:", error);
+    } catch {
+      this.notificationService.showSystemError("Error interno: no se pudo guardar el torneo.");
     }
   }
 
@@ -851,11 +854,11 @@ export class TournamentService {
         config: { ...r.config, scoringMode: r.config.scoringMode ?? "points" },
         matches: r.matches.map((m) => this.migrateMatch(m)),
       }));
-      this.historySubject.next(history);
-    } catch (error) {
-      console.error("Error loading from localStorage:", error);
-    }
-  }
+       this.historySubject.next(history);
+     } catch {
+       this.notificationService.showSystemError("Error interno: no se pudieron cargar los datos locales.");
+     }
+   }
 
   private migrateMatch(m: Match): Match {
     return {
@@ -869,15 +872,24 @@ export class TournamentService {
 
   private addToHistory(config: TournamentConfig, matches: Match[]): string {
     const history = this.loadHistory();
+    const now = new Date();
+    const createdAt = now.toISOString();
+
+    let label = config.name?.trim();
+    if (!label) {
+      const dateStr = now.toLocaleDateString();
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      label = `Americano ${config.players.length} jugs · ${dateStr} ${timeStr}`;
+    }
+
     const record: TournamentRecord = {
       id: crypto.randomUUID?.() ?? Date.now().toString(36),
-      createdAt: new Date().toISOString(),
-      label:
-        config.name?.trim() ||
-        `Americano ${config.players.length} jugs · ${new Date().toLocaleDateString()}`,
+      createdAt,
+      label,
       config,
       matches,
     };
+
     this._currentTournamentId.next(record.id);
     history.unshift(record);
     if (history.length > 20) history.pop();
@@ -921,14 +933,10 @@ export class TournamentService {
     return record;
   }
 
-  deleteHistoryRecord(recordId: string): void {
+   deleteHistoryRecord(recordId: string): void {
     const history = this.loadHistory().filter((r) => r.id !== recordId);
     this.saveHistory(history);
     this.historySubject.next(history);
-  }
-
-  clearCurrentTournament(): void {
-    this._currentTournamentId.next(null);
   }
 
   private loadHistory(): TournamentRecord[] {
@@ -943,8 +951,8 @@ export class TournamentService {
   private saveHistory(history: TournamentRecord[]): void {
     try {
       localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
-    } catch (error) {
-      console.error("Error saving history:", error);
+    } catch {
+      this.notificationService.showSystemError("Error interno: no se pudo guardar el historial.");
     }
   }
 

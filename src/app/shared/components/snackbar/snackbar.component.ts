@@ -2,7 +2,7 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
-export type SnackbarType = 'success' | 'error';
+export type SnackbarType = 'success' | 'error' | 'system-error';
 
 @Component({
   selector: 'app-snackbar',
@@ -11,7 +11,7 @@ export type SnackbarType = 'success' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="snackbar-overlay">
-      <div class="snackbar" [class]="'snackbar--' + type()">
+      <div class="snackbar" [ngClass]="'snackbar--' + type()">
         <mat-icon class="snackbar-icon">{{ type() === 'success' ? 'check_circle' : 'error' }}</mat-icon>
         <span class="snackbar-message">{{ message() }}</span>
         <button class="snackbar-close" (click)="dismissed.emit()" type="button">
@@ -50,13 +50,19 @@ export type SnackbarType = 'success' | 'error';
       border: 1px solid rgba(0, 230, 118, 0.25);
     }
 
-    .snackbar--error {
-      background: #2b0d0d;
-      color: var(--accent-red);
-      border: 1px solid rgba(255, 61, 0, 0.25);
-    }
+     .snackbar--error {
+       background: #2b0d0d;
+       color: var(--accent-red);
+       border: 1px solid rgba(255, 61, 0, 0.25);
+     }
 
-    .snackbar-icon {
+     .snackbar--system-error {
+       background: #1a0d2b;
+       color: oklch(0.698 0.329 328.363);
+       border: 1px solid oklch(0.698 0.329 328.363 / 0.25);
+     }
+
+     .snackbar-icon {
       font-size: 20px;
       width: 20px;
       height: 20px;

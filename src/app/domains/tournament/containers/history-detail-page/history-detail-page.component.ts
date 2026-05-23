@@ -8,7 +8,7 @@ import { PrimaryButtonComponent } from '@shared/components/primary-button/primar
 import { isSetComplete as _isSetComplete, isMatchComplete as _isMatchComplete, getMatchWinner as _getMatchWinner, getSetWinner as _getSetWinner } from '@domain/tournament/data-access/tournament.service';
 
 @Component({
-  selector: 'app-history-detail',
+  selector: 'app-history-detail-page',
   standalone: true,
   imports: [CommonModule, MatIconModule, PrimaryButtonComponent],
   template: `
@@ -246,10 +246,10 @@ import { isSetComplete as _isSetComplete, isMatchComplete as _isMatchComplete, g
       </div>
     </div>
   `,
-  styleUrl: './history-detail.component.scss',
+  styleUrl: './history-detail-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class HistoryDetailComponent implements OnInit {
+export class HistoryDetailPageComponent implements OnInit {
   private readonly facade = inject(TournamentFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

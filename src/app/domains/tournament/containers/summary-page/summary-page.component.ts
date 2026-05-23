@@ -1,12 +1,10 @@
 import {
   Component,
   OnInit,
-  ViewChild,
   ElementRef,
   inject,
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  signal,
+  viewChild,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
@@ -15,36 +13,34 @@ import { TournamentFacade } from "@domain/tournament/data-access/tournament.faca
 import { Match, PlayerStats, SetScore } from "@shared/models/player.model";
 import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
 import {
-  SnackbarComponent,
-  SnackbarType,
-} from "@shared/components/snackbar/snackbar.component";
-import {
   isValidPointsInput,
   getMatchWinner as _getMatchWinner,
   getSetWinner as _getSetWinner,
   isSetComplete as _isSetComplete,
   isMatchComplete as _isMatchComplete,
 } from "@domain/tournament/data-access/tournament.service";
+import { NotificationService } from "@shared/services/notification.service";
 
 @Component({
-  selector: "app-summary",
+  selector: "app-summary-page",
   standalone: true,
   imports: [
     FormsModule,
     MatIconModule,
     PrimaryButtonComponent,
-    SnackbarComponent,
   ],
-  templateUrl: "./summary.component.html",
-  styleUrl: "./summary.component.scss",
+  templateUrl: "./summary-page.component.html",
+  styleUrl: "./summary-page.component.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SummaryComponent implements OnInit {
+export class SummaryPageComponent implements OnInit {
   private readonly facade = inject(TournamentFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly cdr = inject(ChangeDetectorRef);
-  @ViewChild("statisticsSection") statisticsSection?: ElementRef;
+  private readonly notifications = inject(NotificationService);
+  protected readonly statisticsSection = viewChild<ElementRef<HTMLElement>>(
+    "statisticsSection",
+  );
 
   matches: Match[] = [];
   statistics: PlayerStats[] = [];
@@ -56,11 +52,6 @@ export class SummaryComponent implements OnInit {
     number,
     { scorePair1?: number; scorePair2?: number; sets: SetScore[] }
   > = new Map();
-  snackbarMessage = signal("");
-  snackbarType = signal<SnackbarType>("success");
-  showSnackbar = signal(false);
-  private snackbarTimer: ReturnType<typeof setTimeout> | null = null;
-
   ngOnInit(): void {
     const tournamentId = this.route.snapshot.paramMap.get("id");
     if (tournamentId) {
@@ -95,10 +86,10 @@ export class SummaryComponent implements OnInit {
     navigator.clipboard
       .writeText(summary)
       .then(() => {
-        this.showSnack("Resumen copiado al portapapeles", "success");
+        this.notifications.showSuccess("Resumen copiado al portapapeles");
       })
       .catch(() => {
-        this.showSnack("No se pudo copiar al portapapeles", "error");
+        this.notifications.showError("No se pudo copiar al portapapeles");
       });
   }
 
@@ -117,7 +108,7 @@ export class SummaryComponent implements OnInit {
     if (this.showStatistics) {
       this.updateStatistics();
       setTimeout(() => {
-        this.statisticsSection?.nativeElement.scrollIntoView({
+        this.statisticsSection()?.nativeElement.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
@@ -144,9 +135,8 @@ export class SummaryComponent implements OnInit {
       const p1 = match.scorePair1 ?? 0;
       const p2 = match.scorePair2 ?? 0;
       if (!isValidPointsInput(p1, p2)) {
-        this.showSnack(
+        this.notifications.showError(
           "El marcador debe tener una diferencia mínima de 2 puntos",
-          "error",
         );
         return;
       }
@@ -156,7 +146,7 @@ export class SummaryComponent implements OnInit {
         (s) => s.pair1Games > 0 || s.pair2Games > 0,
       );
       if (validSets.length === 0) {
-        this.showSnack("Introduce al menos un set con resultado", "error");
+        this.notifications.showError("Introduce al menos un set con resultado");
         return;
       }
       this.facade.updateSetScores(match.number, match.sets);
@@ -196,10 +186,10 @@ export class SummaryComponent implements OnInit {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        this.showSnack("Ranking copiado al portapapeles", "success");
+        this.notifications.showSuccess("Ranking copiado al portapapeles");
       })
       .catch(() => {
-        this.showSnack("No se pudo copiar el ranking", "error");
+        this.notifications.showError("No se pudo copiar el ranking");
       });
   }
 
@@ -304,21 +294,4 @@ export class SummaryComponent implements OnInit {
     return _idx;
   }
 
-  private showSnack(message: string, type: SnackbarType): void {
-    if (this.snackbarTimer) clearTimeout(this.snackbarTimer);
-    this.snackbarMessage.set(message);
-    this.snackbarType.set(type);
-    this.showSnackbar.set(true);
-    this.snackbarTimer = setTimeout(() => {
-      this.showSnackbar.set(false);
-      this.cdr.markForCheck();
-    }, 5000);
-    this.cdr.markForCheck();
-  }
-
-  protected dismissSnackbar(): void {
-    if (this.snackbarTimer) clearTimeout(this.snackbarTimer);
-    this.showSnackbar.set(false);
-    this.cdr.markForCheck();
-  }
 }

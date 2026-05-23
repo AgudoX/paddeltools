@@ -1,1 +1,9 @@
-<router-outlet></router-outlet>
+<router-outlet />
+
+@if (notificationService.activeNotification()) {
+  <app-snackbar
+    [message]="notificationService.activeNotification()!.message"
+    [type]="toSnackbarType(notificationService.activeNotification()!.type)"
+    (dismissed)="dismissCurrent()"
+  />
+}
