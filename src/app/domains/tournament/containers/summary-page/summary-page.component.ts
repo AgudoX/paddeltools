@@ -45,6 +45,7 @@ export class SummaryPageComponent implements OnInit {
   matches: Match[] = [];
   statistics: PlayerStats[] = [];
   showStatistics = false;
+  showMobileMenu = false;
   editingMatch: number | null = null;
   matchesByRound: Map<number, Match[]> = new Map();
   rounds: number[] = [];
@@ -96,15 +97,22 @@ export class SummaryPageComponent implements OnInit {
   shareWhatsApp(): void {
     const summary = this.facade.generateSummary(this.matches);
     const url = `https://wa.me/?text=${encodeURIComponent(summary)}`;
+    this.notifications.showSuccess("Abriendo resumen en WhatsApp");
     window.open(url, "_blank");
   }
 
   backToForm(): void {
+    this.notifications.showSuccess("Volviendo a configuración");
+    this.showMobileMenu = false;
     this.router.navigate(["/"]);
   }
 
   toggleStatistics(): void {
     this.showStatistics = !this.showStatistics;
+    this.showMobileMenu = false;
+    this.notifications.showSuccess(
+      this.showStatistics ? "Mostrando clasificación" : "Ocultando clasificación",
+    );
     if (this.showStatistics) {
       this.updateStatistics();
       setTimeout(() => {
@@ -178,6 +186,8 @@ export class SummaryPageComponent implements OnInit {
   }
 
   goToHistory(): void {
+    this.notifications.showSuccess("Abriendo historial");
+    this.showMobileMenu = false;
     this.router.navigate(["/history"]);
   }
 
@@ -196,7 +206,12 @@ export class SummaryPageComponent implements OnInit {
   shareRankingWhatsApp(): void {
     const text = this.buildRankingText();
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    this.notifications.showSuccess("Abriendo ranking en WhatsApp");
     window.open(url, "_blank");
+  }
+
+  toggleMobileMenu(): void {
+    this.showMobileMenu = !this.showMobileMenu;
   }
 
   private buildRankingText(): string {

@@ -5,8 +5,13 @@ describe("NotificationService", () => {
   let service: NotificationService;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     TestBed.configureTestingModule({});
     service = TestBed.inject(NotificationService);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should be created", () => {
@@ -50,20 +55,29 @@ describe("NotificationService", () => {
     expect(service.activeNotification()).toBeNull();
   });
 
-   it("activeNotification returns first notification in queue", () => {
-     service.showSuccess("Primero");
-     service.showError("Segundo");
-     expect(service.activeNotification()!.message).toBe("Primero");
-   });
+  it("replaces the current notification with the latest one", () => {
+    service.showSuccess("Primero");
+    service.showError("Segundo");
+    expect(service.activeNotification()!.message).toBe("Segundo");
+  });
 
-   it("uses Date.now() fallback when crypto.randomUUID is unavailable", () => {
-     const originalRandomUUID = crypto.randomUUID;
-     (crypto as Record<string, unknown>).randomUUID = undefined;
+  it("auto dismisses notifications after the timeout", () => {
+    service.showSuccess("Temporal");
+    expect(service.activeNotification()!.message).toBe("Temporal");
 
-     service.showSuccess("Test with fallback");
+    vi.advanceTimersByTime(4000);
 
-     expect(service.activeNotification()).not.toBeNull();
+    expect(service.activeNotification()).toBeNull();
+  });
 
-     (crypto as Record<string, unknown>).randomUUID = originalRandomUUID;
-   });
- });
+  it("uses Date.now() fallback when crypto.randomUUID is unavailable", () => {
+    const originalRandomUUID = (crypto as any).randomUUID;
+    (crypto as any).randomUUID = undefined;
+
+    service.showSuccess("Test with fallback");
+
+    expect(service.activeNotification()).not.toBeNull();
+
+    (crypto as any).randomUUID = originalRandomUUID;
+  });
+});

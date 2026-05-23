@@ -10,6 +10,16 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.spec.ts'],
     css: { include: [] },
+    coverage: {
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.spec.ts', 'src/test-setup.ts', 'src/main.ts'],
+      thresholds: {
+        statements: 94,
+        branches: 84,
+        functions: 91,
+        lines: 95,
+      },
+    },
   },
   resolve: {
     alias: {
