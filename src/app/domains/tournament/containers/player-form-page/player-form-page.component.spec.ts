@@ -232,6 +232,40 @@ describe('PlayerFormPageComponent', () => {
     });
   });
 
+  describe('hero CTA', () => {
+    it('shows player-oriented label in free americano mode', () => {
+      component.mode = 'free';
+      expect(component.heroActionLabel()).toBe('Ir a jugadores');
+    });
+
+    it('shows pair-oriented label in classic mode', () => {
+      component.setCompetitionType('classic');
+      expect(component.heroActionLabel()).toBe('Configurar parejas');
+    });
+
+    it('scrolls to the roster section when requested', () => {
+      const scrollIntoView = vi.fn();
+      const rosterSection = {
+        nativeElement: { scrollIntoView },
+      };
+
+      (
+        component as unknown as {
+          rosterSection: () => typeof rosterSection;
+        }
+      ).rosterSection = () => rosterSection;
+
+      component.scrollToRoster();
+
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      expect(facadeSpy.generateTournament).not.toHaveBeenCalled();
+      expect(facadeSpy.generateClassicTournament).not.toHaveBeenCalled();
+    });
+  });
+
   describe('onPlayerUpdate', () => {
     it('updates player name and position', () => {
       component.players = [{ id: 5, name: 'Old', position: 'right' }];

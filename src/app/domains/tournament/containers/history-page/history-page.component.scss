@@ -1,7 +1,14 @@
 .history-container {
+  --feature-accent-rgb: 164, 174, 193;
+  --primary: #d6dbe4;
+  --primary-bright: #eef1f5;
+  --primary-deep: #8a93a3;
+  --on-primary: #111315;
   min-height: 100vh;
   padding: 16px;
-  background: var(--canvas-dark);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
+    var(--canvas-dark);
 
   @media (min-width: 768px) {
     padding: 32px;
@@ -15,6 +22,14 @@
   border-radius: var(--radius-xl);
   border: 1px solid var(--hairline-dark);
   padding: 24px;
+  box-shadow:
+    0 0 24px rgba(164, 174, 193, 0.08),
+    0 24px 48px rgba(0, 0, 0, 0.22);
+
+  @media (max-width: 639px) {
+    padding: 18px;
+    border-radius: 20px;
+  }
 
   @media (min-width: 768px) {
     padding: 40px;
@@ -43,6 +58,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  text-align: center;
 
   @media (min-width: 768px) {
     font-size: 28px;
@@ -86,7 +102,16 @@
   transition: all var(--transition-base);
 
   &:hover {
-    border-color: rgba(204, 255, 0, 0.15);
+    border-color: rgba(164, 174, 193, 0.24);
+    background: color-mix(in srgb, var(--surface-deep) 92%, white 8%);
+  }
+
+  @media (max-width: 639px) {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    gap: 10px 12px;
+    padding: 14px;
   }
 }
 
@@ -115,18 +140,41 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  @media (max-width: 639px) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.35;
+  }
 }
 
 .history-info {
   font-family: var(--font-jakarta);
   font-size: var(--font-size-sm);
   color: var(--mute);
+
+  @media (max-width: 639px) {
+    line-height: 1.4;
+  }
 }
 
 .history-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   flex-shrink: 0;
+
+  @media (max-width: 639px) {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: stretch;
+
+    app-floating-button {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
 }
 
 .pagination {
@@ -135,10 +183,27 @@
   justify-content: center;
   gap: 16px;
   margin-top: 24px;
+
+  @media (max-width: 639px) {
+    flex-wrap: wrap;
+    gap: 12px;
+
+    app-floating-button {
+      flex: 1 1 calc(50% - 6px);
+      min-width: 0;
+      justify-content: center;
+    }
+  }
 }
 
 .page-info {
   font-family: var(--font-jakarta);
   font-size: var(--font-size-sm);
   color: var(--on-dark-mute);
+
+  @media (max-width: 639px) {
+    order: -1;
+    width: 100%;
+    text-align: center;
+  }
 }

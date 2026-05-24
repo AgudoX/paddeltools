@@ -9,14 +9,14 @@ import { CommonModule } from "@angular/common";
 import { Router } from "@angular/router";
 import { MatIconModule } from "@angular/material/icon";
 import { TournamentFacade } from "@domain/tournament/data-access/tournament.facade";
-import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
+import { FloatingButtonComponent } from "@shared/components/floating-button/floating-button.component";
 import { PadelCraftLogoComponent } from "@shared/components/padelcraft-logo/padelcraft-logo.component";
 import { TournamentRecord } from "@shared/models/player.model";
 
 @Component({
   selector: "app-history-page",
   standalone: true,
-  imports: [CommonModule, MatIconModule, PrimaryButtonComponent, PadelCraftLogoComponent],
+  imports: [CommonModule, MatIconModule, FloatingButtonComponent, PadelCraftLogoComponent],
   template: `
     <div class="history-container">
       <div class="history-card">
@@ -24,13 +24,14 @@ import { TournamentRecord } from "@shared/models/player.model";
           <h1 class="main-title">
             <mat-icon>history</mat-icon> Historial de Torneos
           </h1>
-          <app-primary-button
-            variant="outline-dark"
+          <app-floating-button
             icon="arrow_back"
+            title="Volver"
+            ariaLabel="Volver"
             (clicked)="backToSummary()"
           >
             Volver
-          </app-primary-button>
+          </app-floating-button>
         </div>
 
         @let records = facade.history();
@@ -38,13 +39,15 @@ import { TournamentRecord } from "@shared/models/player.model";
            <div class="empty-state">
              <app-padelcraft-logo class="empty-icon" [size]="80" />
              <p>Aún no hay torneos guardados.</p>
-            <app-primary-button
+            <app-floating-button
               variant="primary"
               icon="add"
+              title="Crear torneo"
+              ariaLabel="Crear torneo"
               (clicked)="backToForm()"
             >
               Crear Torneo
-            </app-primary-button>
+            </app-floating-button>
           </div>
         } @else {
           <div class="history-list">
@@ -65,44 +68,50 @@ import { TournamentRecord } from "@shared/models/player.model";
                   </span>
                 </div>
                 <div class="history-actions">
-                  <app-primary-button
+                  <app-floating-button
                     variant="primary"
                     icon="visibility"
+                    title="Ver torneo"
+                    ariaLabel="Ver torneo"
                     (clicked)="viewTournament(record.id)"
                   >
                     Ver
-                  </app-primary-button>
-                  <app-primary-button
+                  </app-floating-button>
+                  <app-floating-button
                     variant="danger"
                     icon="delete"
+                    title="Eliminar torneo"
+                    ariaLabel="Eliminar torneo"
                     (clicked)="onDelete(record.id)"
                   >
-                  </app-primary-button>
+                  </app-floating-button>
                 </div>
               </div>
             }
           </div>
 
           <div class="pagination">
-            <app-primary-button
-              variant="dark"
+            <app-floating-button
               icon="chevron_left"
+              title="Página anterior"
+              ariaLabel="Página anterior"
               [disabled]="page() === 0"
               (clicked)="prevPage()"
             >
               Anterior
-            </app-primary-button>
+            </app-floating-button>
             <span class="page-info"
               >Página {{ page() + 1 }} de {{ totalPages() }}</span
             >
-            <app-primary-button
-              variant="dark"
+            <app-floating-button
               icon="chevron_right"
+              title="Página siguiente"
+              ariaLabel="Página siguiente"
               [disabled]="page() >= totalPages() - 1"
               (clicked)="nextPage()"
             >
               Siguiente
-            </app-primary-button>
+            </app-floating-button>
           </div>
         }
       </div>

@@ -4,7 +4,9 @@ import {
   inject,
   ChangeDetectionStrategy,
   computed,
+  ElementRef,
   signal,
+  viewChild,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -21,7 +23,7 @@ import {
   ScoringMode,
   TournamentConfig,
 } from "@shared/models/player.model";
-import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
+import { FloatingButtonComponent } from "@shared/components/floating-button/floating-button.component";
 import { PlayerCardComponent } from "@domain/tournament/components/player-card/player-card.component";
 import { PairCardComponent } from "@domain/tournament/components/pair-card/pair-card.component";
 import { ClassicTournamentFormComponent } from "@domain/tournament/components/classic-tournament-form/classic-tournament-form.component";
@@ -43,7 +45,7 @@ interface PairForm {
     CommonModule,
     FormsModule,
     MatIconModule,
-    PrimaryButtonComponent,
+    FloatingButtonComponent,
     PlayerCardComponent,
     PairCardComponent,
     ClassicTournamentFormComponent,
@@ -64,18 +66,26 @@ export class PlayerFormPageComponent implements OnInit {
   readonly isClassic = computed(() => this.competitionType() === "classic");
   readonly heroSubtitle = computed(() =>
     this.isClassic()
-      ? "Diseña cuadros clásicos, prepara el bracket y deja listo el PDF"
-      : "Organiza tu americano de pádel al instante"
+      ? "Diseña cuadros de torneos y descarga un PDF con toda la información"
+      : "Organiza tu americano de pádel al instante",
   );
   readonly primaryActionLabel = computed(() =>
-    this.isClassic() ? "Crear Torneo" : "Generar Americano"
+    this.isClassic() ? "Crear Torneo" : "Generar Americano",
   );
   readonly primaryActionLoadingLabel = computed(() =>
-    this.isClassic() ? "Preparando..." : "Generando..."
+    this.isClassic() ? "Preparando..." : "Generando...",
+  );
+  readonly heroActionLabel = computed(() =>
+    this.isClassic()
+      ? "Configurar parejas"
+      : this.mode === "fixed-pairs"
+        ? "Ir a parejas"
+        : "Ir a jugadores",
   );
   readonly tournamentNameLabel = computed(() =>
-    this.isClassic() ? "Nombre del Torneo" : "Nombre del Americano"
+    this.isClassic() ? "Nombre del Torneo" : "Nombre del Americano",
   );
+  readonly rosterSection = viewChild<ElementRef<HTMLElement>>("rosterSection");
 
   tournamentName = "";
   numberOfPlayers = 8;
@@ -254,7 +264,17 @@ export class PlayerFormPageComponent implements OnInit {
   }
 
   onClassicPlayersChange(value: number): void {
-    this.numberOfPlayers = Math.max(4, value);
+    const minimumPlayers = this.classicFormat === "groups-and-playoffs" ? 8 : 4;
+    this.numberOfPlayers = Math.max(minimumPlayers, value);
+    this.updateNumberOfPlayers();
+  }
+
+  onClassicFormatChange(format: ClassicTournamentFormat): void {
+    this.classicFormat = format;
+    if (format === "groups-and-playoffs") {
+      this.numberOfPlayers = Math.max(8, this.numberOfPlayers);
+      this.classicSeeded = true;
+    }
     this.updateNumberOfPlayers();
   }
 
@@ -294,8 +314,11 @@ export class PlayerFormPageComponent implements OnInit {
 
   protected duplicateName(): boolean {
     const name = this.tournamentName.trim();
-    return !!name && this.facade.history().some(
-      (r) => r.label.toLowerCase() === name.toLowerCase()
+    return (
+      !!name &&
+      this.facade
+        .history()
+        .some((r) => r.label.toLowerCase() === name.toLowerCase())
     );
   }
 
@@ -307,8 +330,14 @@ export class PlayerFormPageComponent implements OnInit {
     }
 
     if (this.isClassic()) {
-      if (this.numberOfPlayers < 4) {
-        this.errors.push("Debe haber al menos 4 jugadores");
+      const minimumPlayers =
+        this.classicFormat === "groups-and-playoffs" ? 8 : 4;
+      if (this.numberOfPlayers < minimumPlayers) {
+        this.errors.push(
+          this.classicFormat === "groups-and-playoffs"
+            ? "Grupos + playoffs necesita al menos 8 jugadores"
+            : "Debe haber al menos 4 jugadores",
+        );
       }
 
       if (this.numberOfPlayers % 2 !== 0) {
@@ -334,6 +363,15 @@ export class PlayerFormPageComponent implements OnInit {
       );
       if (uniqueClassicNames.size !== classicNames.length) {
         this.errors.push("Los nombres de todas las parejas deben ser únicos");
+      }
+
+      if (
+        this.classicFormat === "groups-and-playoffs" &&
+        this.pairs.length < 4
+      ) {
+        this.errors.push(
+          "Grupos + playoffs necesita al menos 4 parejas completas",
+        );
       }
 
       return this.errors.length === 0;
@@ -414,6 +452,13 @@ export class PlayerFormPageComponent implements OnInit {
     }
 
     this.generateTournament();
+  }
+
+  scrollToRoster(): void {
+    this.rosterSection()?.nativeElement.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   }
 
   generateTournament(): void {

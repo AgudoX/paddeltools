@@ -1,5 +1,8 @@
 import { Pair } from '@shared/models/player.model';
-import { generateClassicBracket } from './classic-tournament-generation.utils';
+import {
+  calculateClassicGroupStandings,
+  generateClassicBracket,
+} from './classic-tournament-generation.utils';
 
 function makePair(id: number): Pair {
   return {
@@ -39,5 +42,55 @@ describe('generateClassicBracket', () => {
 
     expect(matches).toHaveLength(4);
     expect(matches.at(-1)?.round).toBe(3);
+  });
+
+  it('creates groups and playoff placeholders when using groups-and-playoffs', () => {
+    const matches = generateClassicBracket(
+      [
+        makePair(1),
+        makePair(2),
+        makePair(3),
+        makePair(4),
+        makePair(5),
+        makePair(6),
+      ],
+      {
+        format: 'groups-and-playoffs',
+        seeded: true,
+        thirdPlaceMatch: false,
+      },
+    );
+
+    const groupMatches = matches.filter((match) => match.stage === 'group');
+    const playoffMatches = matches.filter((match) => match.stage === 'playoff');
+
+    expect(groupMatches.length).toBeGreaterThan(0);
+    expect(playoffMatches).toHaveLength(3);
+    expect(playoffMatches[0].pair1[0].name).toContain('Grupo');
+  });
+
+  it('calculates standings for completed group matches', () => {
+    const matches = generateClassicBracket(
+      [makePair(1), makePair(2), makePair(3), makePair(4)],
+      {
+        format: 'groups-and-playoffs',
+        seeded: true,
+        thirdPlaceMatch: false,
+      },
+    );
+
+    const groupAMatches = matches.filter((match) => match.groupKey === 'Grupo A');
+    groupAMatches[0].completed = true;
+    groupAMatches[0].winner = 'pair1';
+    groupAMatches[0].sets = [
+      { pair1Games: 6, pair2Games: 4 },
+      { pair1Games: 6, pair2Games: 3 },
+    ];
+
+    const standings = calculateClassicGroupStandings(matches, 'Grupo A');
+
+    expect(standings[0].wins).toBe(1);
+    expect(standings[0].losses).toBe(0);
+    expect(standings).toHaveLength(2);
   });
 });

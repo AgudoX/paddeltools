@@ -21,13 +21,19 @@ export interface SetScore {
 }
 
 export interface MatchSlotSource {
-  kind: 'winner' | 'loser';
-  matchNumber: number;
+  kind: 'winner' | 'loser' | 'group-rank';
+  matchNumber?: number;
+  groupKey?: string;
+  rank?: number;
 }
+
+export type MatchStage = 'group' | 'playoff';
 
 export interface Match {
   number: number;
   round: number;
+  stage?: MatchStage;
+  groupKey?: string;
   pair1: [Player, Player];
   pair2: [Player, Player];
   pair1Source?: MatchSlotSource;

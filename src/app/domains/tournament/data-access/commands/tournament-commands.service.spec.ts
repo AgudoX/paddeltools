@@ -152,6 +152,33 @@ describe('TournamentCommandsService', () => {
     ).toThrow('Usa generateClassicTournament para torneos clásicos');
   });
 
+  it('propagates group standings into playoffs for groups-and-playoffs', () => {
+    const config = makeClassicConfig();
+    config.format = 'groups-and-playoffs';
+    config.seeded = true;
+    config.pairs = [
+      makePair(1),
+      makePair(2),
+      makePair(3),
+      makePair(4),
+    ];
+    config.players = config.pairs.flatMap((pair) => [pair.player1, pair.player2]);
+
+    service.generateClassicTournament(config);
+
+    const groupMatches = store.matches().filter((match) => match.stage === 'group');
+    for (const match of groupMatches) {
+      service.updateClassicMatchWinner(match.number, 'pair1');
+    }
+
+    const semifinal = store
+      .matches()
+      .find((match) => match.stage === 'playoff' && match.round === 1);
+
+    expect(semifinal?.pair1[0].name).not.toContain('Grupo');
+    expect(semifinal?.pair2[0].name).not.toContain('Grupo');
+  });
+
   it('updateClassicMatch throws when config is not classic', () => {
     service.generateTournament({
       type: 'americano',

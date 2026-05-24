@@ -46,7 +46,7 @@ describe('HistoryPageComponent', () => {
   }
 
   function getButtons(): HTMLButtonElement[] {
-    return Array.from(fixture.nativeElement.querySelectorAll('app-primary-button button'));
+    return Array.from(fixture.nativeElement.querySelectorAll('app-floating-button button'));
   }
 
   function getHistoryItems(): NodeListOf<Element> {

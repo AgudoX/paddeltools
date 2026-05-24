@@ -13,7 +13,11 @@ import {
 import { TournamentStoreService } from "../state/tournament-store.service";
 import { TournamentPersistenceService } from "../infrastructure/tournament-persistence.service";
 import { generateFreeMode, generateWithFixedPairs } from "../utils/tournament-generation.utils";
-import { generateClassicBracket } from "../utils/classic-tournament-generation.utils";
+import {
+  calculateClassicGroupStandings,
+  generateClassicBracket,
+  isClassicGroupComplete,
+} from "../utils/classic-tournament-generation.utils";
 import { calculatePairStatistics, calculateStatistics } from "../utils/tournament-statistics.utils";
 import { generateSummary } from "../utils/tournament-summary.utils";
 import { getSetWinner } from "../utils/tournament-scoring.utils";
@@ -60,6 +64,7 @@ export class TournamentCommandsService {
     }
 
     const matches = generateClassicBracket(config.pairs, {
+      format: config.format,
       seeded: config.seeded,
       thirdPlaceMatch: config.thirdPlaceMatch,
       scoringMode: "sets",
@@ -92,7 +97,7 @@ export class TournamentCommandsService {
   }
 
   updateSetScores(matchNumber: number, sets: SetScore[]): void {
-    const matches = this.store.matches().map((match) => {
+    const updatedMatches = this.store.matches().map((match) => {
       if (match.number !== matchNumber) return match;
 
       let pair1Sets = 0;
@@ -116,11 +121,16 @@ export class TournamentCommandsService {
       } satisfies Match;
     });
 
-    this.store.setMatches(matches);
     const config = this.store.config();
+    const nextMatches =
+      config?.type === "classic"
+        ? this.rebuildClassicDependencies(updatedMatches)
+        : updatedMatches;
+
+    this.store.setMatches(nextMatches);
     if (config) {
-      this.persistence.saveSession(config, matches);
-      this.updateHistoryMatches(matches);
+      this.persistence.saveSession(config, nextMatches);
+      this.updateHistoryMatches(nextMatches);
     }
   }
 
@@ -328,7 +338,13 @@ export class TournamentCommandsService {
     matchMap: Map<number, Match>,
     source: MatchSlotSource,
   ): [Player, Player] {
-    const sourceMatch = matchMap.get(source.matchNumber);
+    if (source.kind === "group-rank") {
+      return this.resolveGroupRankSource(matchMap, source);
+    }
+
+    const sourceMatch = source.matchNumber
+      ? matchMap.get(source.matchNumber)
+      : undefined;
     if (!sourceMatch || !sourceMatch.completed || !sourceMatch.winner) {
       return this.createDependencyPlaceholder(source);
     }
@@ -347,24 +363,45 @@ export class TournamentCommandsService {
   private createDependencyPlaceholder(
     source: MatchSlotSource,
   ): [Player, Player] {
-    const label = `${
-      source.kind === "winner" ? "Ganador" : "Perdedor"
-    } P${source.matchNumber}`;
+    const label =
+      source.kind === "group-rank"
+        ? `${source.rank}º ${source.groupKey}`
+        : `${source.kind === "winner" ? "Ganador" : "Perdedor"} P${source.matchNumber}`;
 
     return [
       {
-        id: -30000 - source.matchNumber,
+        id: -30000 - (source.matchNumber ?? source.rank ?? 0),
         name: label,
         position: "either",
-        pairId: -30000 - source.matchNumber,
+        pairId: -30000 - (source.matchNumber ?? source.rank ?? 0),
       },
       {
-        id: -40000 - source.matchNumber,
+        id: -40000 - (source.matchNumber ?? source.rank ?? 0),
         name: label,
         position: "either",
-        pairId: -30000 - source.matchNumber,
+        pairId: -30000 - (source.matchNumber ?? source.rank ?? 0),
       },
     ];
+  }
+
+  private resolveGroupRankSource(
+    matchMap: Map<number, Match>,
+    source: MatchSlotSource,
+  ): [Player, Player] {
+    if (!source.groupKey || !source.rank) {
+      return this.createDependencyPlaceholder(source);
+    }
+
+    const allMatches = Array.from(matchMap.values());
+    if (!isClassicGroupComplete(allMatches, source.groupKey)) {
+      return this.createDependencyPlaceholder(source);
+    }
+
+    const standings = calculateClassicGroupStandings(allMatches, source.groupKey);
+    const qualifiedPair = standings[source.rank - 1]?.pair;
+    return qualifiedPair
+      ? this.clonePair(qualifiedPair)
+      : this.createDependencyPlaceholder(source);
   }
 
   private clonePair(pair: [Player, Player]): [Player, Player] {
@@ -384,6 +421,10 @@ export class TournamentCommandsService {
   }
 
   private isPlaceholderPair(pair: [Player, Player]): boolean {
-    return pair[0].name === pair[1].name && /^Ganador P|^Perdedor P/.test(pair[0].name);
+    return (
+      pair[0].name === pair[1].name &&
+      (/^(Ganador|Perdedor) P\d+$/.test(pair[0].name) ||
+        /^\d+º Grupo [A-Z]$/.test(pair[0].name))
+    );
   }
 }

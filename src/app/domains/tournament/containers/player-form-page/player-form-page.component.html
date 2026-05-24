@@ -28,23 +28,24 @@
       }
 
       <div class="hero-cta">
-        <app-primary-button
-          [variant]="isClassic() ? 'violet' : 'primary'"
-          icon="bolt"
-          [loading]="loading"
-          (clicked)="handlePrimaryAction()"
+        <app-floating-button
+          variant="primary"
+          icon="south"
+          [title]="heroActionLabel()"
+          [ariaLabel]="heroActionLabel()"
+          (clicked)="scrollToRoster()"
         >
-          {{ primaryActionLabel() }}
-          <span loading-label>{{ primaryActionLoadingLabel() }}</span>
-        </app-primary-button>
+          {{ heroActionLabel() }}
+        </app-floating-button>
 
-        <app-primary-button
-          variant="outline-dark"
+        <app-floating-button
           icon="history"
+          title="Ir al historial"
+          ariaLabel="Ir al historial"
           (clicked)="goToHistory()"
         >
           Historial
-        </app-primary-button>
+        </app-floating-button>
       </div>
     </header>
 
@@ -150,7 +151,7 @@
           [seeded]="classicSeeded"
           [thirdPlaceMatch]="classicThirdPlaceMatch"
           (numberOfPlayersChanged)="onClassicPlayersChange($event)"
-          (formatChanged)="classicFormat = $event"
+          (formatChanged)="onClassicFormatChange($event)"
           (seededChanged)="classicSeeded = $event"
           (thirdPlaceMatchChanged)="classicThirdPlaceMatch = $event"
         />
@@ -159,7 +160,7 @@
 
     <!-- ═══ PLAYERS (free mode) ─────── -->
     @if (!isClassic() && mode === 'free') {
-      <section class="section">
+      <section #rosterSection class="section">
         <h2 class="section-title">
           Jugadores
           <span class="section-count">{{ players.length }}</span>
@@ -178,7 +179,7 @@
 
     <!-- ═══ PAIRS (fixed mode / classic) ──────── -->
     @if (mode === 'fixed-pairs' || isClassic()) {
-      <section class="section">
+      <section #rosterSection class="section">
         <h2 class="section-title">
           {{ isClassic() ? 'Parejas del Cuadro' : 'Parejas' }}
         </h2>
@@ -203,23 +204,27 @@
 
     <!-- ═══ FOOTER ACTIONS ──────────── -->
     <footer class="footer-actions">
-      <app-primary-button
-        variant="outline-dark"
+      <app-floating-button
+        variant="danger"
         icon="delete"
+        title="Limpiar formulario"
+        ariaLabel="Limpiar formulario"
+        [disabled]="loading"
         (clicked)="clear()"
       >
         Limpiar
-      </app-primary-button>
+      </app-floating-button>
 
-      <app-primary-button
-        [variant]="isClassic() ? 'violet' : 'primary'"
+      <app-floating-button
+        variant="primary"
         icon="bolt"
-        [loading]="loading"
+        [title]="primaryActionLabel()"
+        [ariaLabel]="primaryActionLabel()"
+        [disabled]="loading"
         (clicked)="handlePrimaryAction()"
       >
-        {{ primaryActionLabel() }}
-        <span loading-label>{{ primaryActionLoadingLabel() }}</span>
-      </app-primary-button>
+        {{ loading ? primaryActionLoadingLabel() : primaryActionLabel() }}
+      </app-floating-button>
     </footer>
   </div>
 </div>

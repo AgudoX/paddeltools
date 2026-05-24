@@ -22,6 +22,10 @@ import {
   getSetWinner,
   isMatchComplete,
 } from "@domain/tournament/data-access/utils/tournament-scoring.utils";
+import {
+  calculateClassicGroupStandings,
+  getClassicGroupKeys,
+} from "@domain/tournament/data-access/utils/classic-tournament-generation.utils";
 
 @Component({
   selector: "app-classic-tournament-page",
@@ -41,10 +45,12 @@ import {
               <p class="classic-view__subtitle">
                 {{ config.pairs.length }} parejas ·
                 {{
-                  config.seeded
-                    ? "Con cabezas de serie"
-                    : "Sin cabezas de serie"
+                  config.format === "groups-and-playoffs"
+                    ? "Grupos + playoffs"
+                    : "Eliminación directa"
                 }}
+                ·
+                {{ config.seeded ? "Cuadro sembrado" : "Cuadro abierto" }}
                 ·
                 {{
                   config.thirdPlaceMatch
@@ -106,163 +112,125 @@ import {
           <section class="classic-view__section">
             <h2 class="classic-view__section-title">
               <mat-icon>account_tree</mat-icon>
-              Cuadro del torneo
+              {{
+                config.format === "groups-and-playoffs"
+                  ? "Fase de grupos"
+                  : "Cuadro del torneo"
+              }}
             </h2>
-            <div class="bracket-grid">
-              @for (round of rounds; track round) {
-                <div class="round-column">
-                  <div class="round-column__title">
-                    {{ roundTitle(round) }}
-                  </div>
-                  <div class="round-column__matches">
-                    @for (
-                      match of matchesByRound.get(round) ?? [];
-                      track match.number
-                    ) {
-                      <article
-                        class="bracket-match"
-                        [class.bracket-match--completed]="match.completed"
-                      >
-                        <div class="bracket-match__header">
-                          <span>Partido {{ match.number }}</span>
-                          @if (match.completed && match.winner) {
-                            <span class="bracket-match__status">Resuelto</span>
-                          }
-                        </div>
+            @if (config.format === "groups-and-playoffs") {
+              <div class="groups-grid">
+                @for (groupKey of groupKeys; track groupKey) {
+                  <article class="group-card">
+                    <header class="group-card__header">
+                      <div class="round-column__title">{{ groupKey }}</div>
+                      <span class="group-card__meta">Top 2 avanzan</span>
+                    </header>
 
+                    <div class="group-card__standings">
+                      @for (entry of groupStandings(groupKey); track entry.pairId; let i = $index) {
                         <div
-                          class="bracket-pair"
-                          [class.bracket-pair--winner]="
-                            match.winner === 'pair1'
-                          "
-                          [class.bracket-pair--bye]="isByePair(match.pair1)"
+                          class="standing-row"
+                          [class.standing-row--qualified]="i < 2"
                         >
-                          {{ pairLabel(match.pair1) }}
+                          <span class="standing-row__rank">{{ i + 1 }}</span>
+                          <span class="standing-row__pair">{{ pairLabel(entry.pair) }}</span>
+                          <span class="standing-row__record">{{ entry.wins }}-{{ entry.losses }}</span>
                         </div>
-                        <div
-                          class="bracket-pair"
-                          [class.bracket-pair--winner]="
-                            match.winner === 'pair2'
-                          "
-                          [class.bracket-pair--bye]="isByePair(match.pair2)"
+                      }
+                    </div>
+
+                    <div class="round-column__matches">
+                      @for (match of groupMatchesByGroup.get(groupKey) ?? []; track match.number) {
+                        <article
+                          class="bracket-match"
+                          [class.bracket-match--completed]="match.completed"
                         >
-                          {{ pairLabel(match.pair2) }}
-                        </div>
-                        @if (editingMatch === match.number) {
-                          <div
-                            class="bracket-match__editor classic-view__actions--no-print"
-                          >
-                            <div class="bracket-match__editor-grid">
-                              @for (setIndex of setIndexes; track setIndex) {
-                                <div class="set-editor">
-                                  <span class="set-editor__label"
-                                    >Set {{ setIndex + 1 }}</span
-                                  >
-                                  <div class="set-editor__inputs">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="99"
-                                      [disabled]="
-                                        !shouldShowSet(match, setIndex)
-                                      "
-                                      [(ngModel)]="
-                                        editableSets[match.number][setIndex]
-                                          .pair1Games
-                                      "
-                                    />
-                                    <span>-</span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="99"
-                                      [disabled]="
-                                        !shouldShowSet(match, setIndex)
-                                      "
-                                      [(ngModel)]="
-                                        editableSets[match.number][setIndex]
-                                          .pair2Games
-                                      "
-                                    />
-                                  </div>
-                                </div>
-                              }
-                            </div>
-                            <div class="bracket-match__actions">
-                              <app-floating-button
-                                variant="primary"
-                                icon="check"
-                                title="Guardar resultado"
-                                ariaLabel="Guardar resultado"
-                                (clicked)="saveMatchEdit(match)"
-                              >
-                                Guardar resultado
-                              </app-floating-button>
-                              <app-floating-button
-                                variant="danger"
-                                icon="close"
-                                title="Cancelar edición"
-                                ariaLabel="Cancelar edición"
-                                (clicked)="cancelMatchEdit(match.number)"
-                              >
-                                Cancelar
-                              </app-floating-button>
-                            </div>
-                          </div>
-                        } @else if (canResolveMatch(match)) {
-                          <div
-                            class="bracket-match__actions classic-view__actions--no-print"
-                          >
-                            <app-floating-button
-                              icon="edit"
-                              title="Editar resultado"
-                              ariaLabel="Editar resultado"
-                              (clicked)="startMatchEdit(match.number)"
-                            >
-                              {{
-                                match.completed
-                                  ? "Editar resultado"
-                                  : "Puntuar partido"
-                              }}
-                            </app-floating-button>
-                            <app-floating-button
-                              variant="primary"
-                              icon="north_east"
-                              title="Avanza la primera pareja"
-                              ariaLabel="Avanza la primera pareja"
-                              (clicked)="resolveMatch(match.number, 'pair1')"
-                            >
-                              Pasa Pareja 1
-                            </app-floating-button>
-                            <app-floating-button
-                              variant="primary"
-                              icon="south_east"
-                              title="Avanza la segunda pareja"
-                              ariaLabel="Avanza la segunda pareja"
-                              (clicked)="resolveMatch(match.number, 'pair2')"
-                            >
-                              Pasa Pareja 2
-                            </app-floating-button>
-                            @if (match.completed) {
-                              <app-floating-button
-                                variant="danger"
-                                icon="restart_alt"
-                                title="Reabrir partido"
-                                ariaLabel="Reabrir partido"
-                                (clicked)="revertMatch(match.number)"
-                              >
-                                Reabrir
-                              </app-floating-button>
+                          <div class="bracket-match__header">
+                            <span>Partido {{ match.number }}</span>
+                            @if (match.completed && match.winner) {
+                              <span class="bracket-match__status">Resuelto</span>
                             }
                           </div>
-                        }
-                      </article>
-                    }
+                          <ng-container
+                            [ngTemplateOutlet]="matchBody"
+                            [ngTemplateOutletContext]="{ match: match }"
+                          />
+                        </article>
+                      }
+                    </div>
+                  </article>
+                }
+              </div>
+            } @else {
+              <div class="bracket-grid">
+                @for (round of playoffRounds; track round) {
+                  <div class="round-column">
+                    <div class="round-column__title">
+                      {{ roundTitle(round) }}
+                    </div>
+                    <div class="round-column__matches">
+                      @for (
+                        match of playoffMatchesByRound.get(round) ?? [];
+                        track match.number
+                      ) {
+                        <article
+                          class="bracket-match"
+                          [class.bracket-match--completed]="match.completed"
+                        >
+                          <div class="bracket-match__header">
+                            <span>Partido {{ match.number }}</span>
+                            @if (match.completed && match.winner) {
+                              <span class="bracket-match__status">Resuelto</span>
+                            }
+                          </div>
+                          <ng-container
+                            [ngTemplateOutlet]="matchBody"
+                            [ngTemplateOutletContext]="{ match: match }"
+                          />
+                        </article>
+                      }
+                    </div>
                   </div>
-                </div>
-              }
-            </div>
+                }
+              </div>
+            }
           </section>
+
+          @if (config.format === "groups-and-playoffs") {
+            <section class="classic-view__section">
+              <h2 class="classic-view__section-title">
+                <mat-icon>emoji_events</mat-icon>
+                Playoffs
+              </h2>
+              <div class="bracket-grid">
+                @for (round of playoffRounds; track round) {
+                  <div class="round-column">
+                    <div class="round-column__title">{{ roundTitle(round) }}</div>
+                    <div class="round-column__matches">
+                      @for (match of playoffMatchesByRound.get(round) ?? []; track match.number) {
+                        <article
+                          class="bracket-match"
+                          [class.bracket-match--completed]="match.completed"
+                        >
+                          <div class="bracket-match__header">
+                            <span>Partido {{ match.number }}</span>
+                            @if (match.completed && match.winner) {
+                              <span class="bracket-match__status">Resuelto</span>
+                            }
+                          </div>
+                          <ng-container
+                            [ngTemplateOutlet]="matchBody"
+                            [ngTemplateOutletContext]="{ match: match }"
+                          />
+                        </article>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </section>
+          }
         } @else {
           <div class="classic-view__empty">
             <mat-icon>search_off</mat-icon>
@@ -278,6 +246,111 @@ import {
           </div>
         }
       </div>
+
+      <ng-template #matchBody let-match="match">
+        <div
+          class="bracket-pair"
+          [class.bracket-pair--winner]="match.winner === 'pair1'"
+          [class.bracket-pair--bye]="isByePair(match.pair1)"
+        >
+          {{ pairLabel(match.pair1) }}
+        </div>
+        <div
+          class="bracket-pair"
+          [class.bracket-pair--winner]="match.winner === 'pair2'"
+          [class.bracket-pair--bye]="isByePair(match.pair2)"
+        >
+          {{ pairLabel(match.pair2) }}
+        </div>
+        @if (editingMatch === match.number) {
+          <div class="bracket-match__editor classic-view__actions--no-print">
+            <div class="bracket-match__editor-grid">
+              @for (setIndex of setIndexes; track setIndex) {
+                <div class="set-editor">
+                  <span class="set-editor__label">Set {{ setIndex + 1 }}</span>
+                  <div class="set-editor__inputs">
+                    <input
+                      type="number"
+                      min="0"
+                      max="99"
+                      [disabled]="!shouldShowSet(match, setIndex)"
+                      [(ngModel)]="editableSets[match.number][setIndex].pair1Games"
+                    />
+                    <span>-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="99"
+                      [disabled]="!shouldShowSet(match, setIndex)"
+                      [(ngModel)]="editableSets[match.number][setIndex].pair2Games"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+            <div class="bracket-match__actions">
+              <app-floating-button
+                variant="primary"
+                icon="check"
+                title="Guardar resultado"
+                ariaLabel="Guardar resultado"
+                (clicked)="saveMatchEdit(match)"
+              >
+                Guardar resultado
+              </app-floating-button>
+              <app-floating-button
+                variant="danger"
+                icon="close"
+                title="Cancelar edición"
+                ariaLabel="Cancelar edición"
+                (clicked)="cancelMatchEdit(match.number)"
+              >
+                Cancelar
+              </app-floating-button>
+            </div>
+          </div>
+        } @else if (canResolveMatch(match)) {
+          <div class="bracket-match__actions classic-view__actions--no-print">
+            <app-floating-button
+              icon="edit"
+              title="Editar resultado"
+              ariaLabel="Editar resultado"
+              (clicked)="startMatchEdit(match.number)"
+            >
+              {{ match.completed ? "Editar resultado" : "Puntuar partido" }}
+            </app-floating-button>
+            <app-floating-button
+              variant="primary"
+              icon="north_east"
+              title="Avanza la primera pareja"
+              ariaLabel="Avanza la primera pareja"
+              (clicked)="resolveMatch(match.number, 'pair1')"
+            >
+              Pasa Pareja 1
+            </app-floating-button>
+            <app-floating-button
+              variant="primary"
+              icon="south_east"
+              title="Avanza la segunda pareja"
+              ariaLabel="Avanza la segunda pareja"
+              (clicked)="resolveMatch(match.number, 'pair2')"
+            >
+              Pasa Pareja 2
+            </app-floating-button>
+            @if (match.completed) {
+              <app-floating-button
+                variant="danger"
+                icon="restart_alt"
+                title="Reabrir partido"
+                ariaLabel="Reabrir partido"
+                (clicked)="revertMatch(match.number)"
+              >
+                Reabrir
+              </app-floating-button>
+            }
+          </div>
+        }
+      </ng-template>
     </div>
   `,
   styles: `
@@ -436,6 +509,86 @@ import {
       letter-spacing: 0.5px;
     }
 
+    .groups-grid {
+      display: grid;
+      gap: 18px;
+
+      @media (min-width: 1040px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .group-card {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border-radius: var(--radius-xl);
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(177, 76, 255, 0.12);
+    }
+
+    .group-card__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .group-card__meta {
+      color: var(--ash);
+      font-family: var(--font-archivo);
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .group-card__standings {
+      display: grid;
+      gap: 8px;
+    }
+
+    .standing-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(177, 76, 255, 0.06);
+      border: 1px solid rgba(177, 76, 255, 0.12);
+    }
+
+    .standing-row--qualified {
+      background: rgba(177, 76, 255, 0.12);
+      border-color: rgba(177, 76, 255, 0.24);
+      box-shadow: 0 0 0 1px rgba(177, 76, 255, 0.12);
+    }
+
+    .standing-row__rank {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: var(--primary-bright);
+      background: rgba(177, 76, 255, 0.12);
+      font-family: var(--font-archivo);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-bold);
+    }
+
+    .standing-row__pair {
+      min-width: 0;
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .standing-row__record {
+      color: var(--ash);
+      font-family: var(--font-archivo);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-bold);
+    }
+
     .round-column__matches {
       display: grid;
       gap: 14px;
@@ -471,9 +624,14 @@ import {
       display: grid;
       gap: 8px;
       margin-top: 12px;
+      grid-template-columns: minmax(0, 1fr);
+
+      app-floating-button {
+        min-width: 0;
+      }
 
       @media (min-width: 1180px) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       }
     }
 
@@ -577,8 +735,10 @@ export class ClassicTournamentPageComponent implements OnInit {
   private readonly pdfService = inject(TournamentPdfService);
   config: ClassicTournamentConfig | null = null;
   matches: Match[] = [];
-  matchesByRound = new Map<number, Match[]>();
-  rounds: number[] = [];
+  groupMatchesByGroup = new Map<string, Match[]>();
+  groupKeys: string[] = [];
+  playoffMatchesByRound = new Map<number, Match[]>();
+  playoffRounds: number[] = [];
   editingMatch: number | null = null;
   editableSets: Record<number, SetScore[]> = {};
   readonly setIndexes = [0, 1, 2];
@@ -598,7 +758,7 @@ export class ClassicTournamentPageComponent implements OnInit {
 
     this.config = record.config;
     this.matches = record.matches;
-    this.groupMatchesByRound();
+    this.organizeMatches();
   }
 
   backToForm(): void {
@@ -694,7 +854,7 @@ export class ClassicTournamentPageComponent implements OnInit {
   }
 
   roundTitle(round: number): string {
-    const finalRound = Math.max(...this.rounds);
+    const finalRound = Math.max(...this.playoffRounds);
     if (this.config?.thirdPlaceMatch && round === finalRound) {
       return "3er puesto";
     }
@@ -728,16 +888,7 @@ export class ClassicTournamentPageComponent implements OnInit {
   }
 
   private groupMatchesByRound(): void {
-    this.matchesByRound.clear();
-    this.rounds = [];
-    this.matches.forEach((match) => {
-      if (!this.matchesByRound.has(match.round)) {
-        this.matchesByRound.set(match.round, []);
-        this.rounds.push(match.round);
-      }
-      this.matchesByRound.get(match.round)?.push(match);
-    });
-    this.rounds.sort((left, right) => left - right);
+    this.organizeMatches();
   }
 
   shouldShowSet(match: Match, setIndex: number): boolean {
@@ -770,13 +921,48 @@ export class ClassicTournamentPageComponent implements OnInit {
   private isPlaceholderPair(pair: Match["pair1"]): boolean {
     return (
       pair[0].name === pair[1].name &&
-      /^(Ganador|Perdedor) P\d+$/.test(pair[0].name)
+      (/^(Ganador|Perdedor) P\d+$/.test(pair[0].name) ||
+        /^\d+º Grupo [A-Z]$/.test(pair[0].name))
     );
   }
 
   private refreshMatches(): void {
     this.matches = this.facade.matches();
-    this.groupMatchesByRound();
+    this.organizeMatches();
+  }
+
+  groupStandings(groupKey: string) {
+    return calculateClassicGroupStandings(this.matches, groupKey);
+  }
+
+  private organizeMatches(): void {
+    this.groupMatchesByGroup.clear();
+    this.playoffMatchesByRound.clear();
+    this.groupKeys = getClassicGroupKeys(this.matches);
+    this.playoffRounds = [];
+
+    this.matches.forEach((match) => {
+      if (match.stage === "group" && match.groupKey) {
+        if (!this.groupMatchesByGroup.has(match.groupKey)) {
+          this.groupMatchesByGroup.set(match.groupKey, []);
+        }
+        this.groupMatchesByGroup.get(match.groupKey)?.push(match);
+        return;
+      }
+
+      if (!this.playoffMatchesByRound.has(match.round)) {
+        this.playoffMatchesByRound.set(match.round, []);
+        this.playoffRounds.push(match.round);
+      }
+      this.playoffMatchesByRound.get(match.round)?.push(match);
+    });
+
+    this.groupKeys.forEach((groupKey) => {
+      this.groupMatchesByGroup.get(groupKey)?.sort(
+        (left, right) => left.number - right.number,
+      );
+    });
+    this.playoffRounds.sort((left, right) => left - right);
   }
 
   private normalizeEditableSets(sets: SetScore[]): SetScore[] {

@@ -19,10 +19,6 @@ import { NeonCounterComponent } from "@shared/components/neon-counter/neon-count
       <div class="classic-panel__intro">
         <span class="classic-panel__eyebrow">Modo Torneo</span>
         <h2 class="classic-panel__title">Cuadro clásico y exportación PDF</h2>
-        <p class="classic-panel__copy">
-          Preparamos la base del torneo eliminatorio para generar un cuadro
-          limpio, imprimible y con una estética propia.
-        </p>
       </div>
 
       <div class="classic-panel__grid">
@@ -85,6 +81,17 @@ import { NeonCounterComponent } from "@shared/components/neon-counter/neon-count
           Partido por el 3er puesto
         </button>
       </div>
+
+      @if (selectedFormat() === "groups-and-playoffs") {
+        <div class="classic-panel__note">
+          <mat-icon>info</mat-icon>
+          <div>
+            <strong>Clasificación automática.</strong>
+            Generamos grupos equilibrados y el cruce final se completa cuando
+            termina cada grupo.
+          </div>
+        </div>
+      }
     </section>
   `,
   styles: `
@@ -112,13 +119,6 @@ import { NeonCounterComponent } from "@shared/components/neon-counter/neon-count
       font-size: clamp(2rem, 4vw, 3.4rem);
       line-height: 0.95;
       letter-spacing: -0.02em;
-    }
-
-    .classic-panel__copy {
-      color: var(--on-dark-mute);
-      font-family: var(--font-jakarta);
-      font-size: var(--font-size-base);
-      margin: 0;
     }
 
     .classic-panel__grid {
@@ -189,6 +189,7 @@ import { NeonCounterComponent } from "@shared/components/neon-counter/neon-count
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
+      margin-top: var(--space-md);
     }
 
     .option-chip {
@@ -242,6 +243,7 @@ import { NeonCounterComponent } from "@shared/components/neon-counter/neon-count
       border: 1px solid rgba(var(--feature-accent-rgb, 177, 76, 255), 0.14);
       color: var(--on-dark-mute);
       font-size: var(--font-size-sm);
+      margin-top: 10px;
 
       strong {
         color: var(--on-dark);
@@ -276,8 +278,8 @@ export class ClassicTournamentFormComponent {
       value: "groups-and-playoffs" as const,
       label: "Grupos + playoffs",
       icon: "grid_view",
-      disabled: true,
-      badge: "Luego",
+      disabled: false,
+      badge: "",
     },
   ];
 }

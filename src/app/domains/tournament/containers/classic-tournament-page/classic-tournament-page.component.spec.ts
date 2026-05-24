@@ -4,7 +4,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ClassicTournamentPageComponent } from './classic-tournament-page.component';
 import { TournamentFacade } from '@domain/tournament/data-access/tournament.facade';
 import { NotificationService } from '@shared/services/notification.service';
-import { SetScore, TournamentRecord } from '@shared/models/player.model';
+import { Match, SetScore, TournamentRecord } from '@shared/models/player.model';
 import { TournamentPdfService } from '@domain/tournament/data-access/infrastructure/tournament-pdf.service';
 import { signal } from '@angular/core';
 
