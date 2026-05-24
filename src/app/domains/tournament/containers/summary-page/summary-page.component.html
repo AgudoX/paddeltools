@@ -1,7 +1,7 @@
 <div class="summary-container">
   <div class="summary-card">
     <div class="header">
-      <h1 class="main-title"><mat-icon>emoji_events</mat-icon> Resumen del Americano</h1>
+      <h1 class="main-title neon-title"><mat-icon>emoji_events</mat-icon> Resumen del Americano</h1>
     </div>
 
     <nav class="floating-menu" aria-label="Acciones del torneo">
@@ -21,61 +21,43 @@
         class="floating-menu__body"
         [class.floating-menu__body--open]="showMobileMenu"
       >
-        <button
-          type="button"
-          class="floating-menu__button"
+        <app-floating-button
+          icon="arrow_back"
           title="Volver a configuración"
-          aria-label="Volver a configuración"
-          (click)="backToForm()"
-        >
-          <mat-icon>arrow_back</mat-icon>
-          <span class="floating-menu__label">Config</span>
-        </button>
+          ariaLabel="Volver a configuración"
+          (clicked)="backToForm()"
+        >Config</app-floating-button>
 
-        <button
-          type="button"
-          class="floating-menu__button floating-menu__button--primary"
+        <app-floating-button
+          variant="primary"
+          icon="content_copy"
           title="Copiar resumen"
-          aria-label="Copiar resumen"
-          (click)="copySummary()"
-        >
-          <mat-icon>content_copy</mat-icon>
-          <span class="floating-menu__label">Resumen</span>
-        </button>
+          ariaLabel="Copiar resumen"
+          (clicked)="copySummary()"
+        >Resumen</app-floating-button>
 
-        <button
-          type="button"
-          class="floating-menu__button floating-menu__button--success"
+        <app-floating-button
+          variant="success"
+          icon="share"
           title="Compartir por WhatsApp"
-          aria-label="Compartir por WhatsApp"
-          (click)="shareWhatsApp()"
-        >
-          <mat-icon>share</mat-icon>
-          <span class="floating-menu__label">WhatsApp</span>
-        </button>
+          ariaLabel="Compartir por WhatsApp"
+          (clicked)="shareWhatsApp()"
+        >WhatsApp</app-floating-button>
 
-        <button
-          type="button"
-          class="floating-menu__button"
-          [class.floating-menu__button--active]="showStatistics"
+        <app-floating-button
+          [active]="showStatistics"
+          [icon]="showStatistics ? 'leaderboard' : 'bar_chart'"
           [title]="showStatistics ? 'Ocultar ranking' : 'Ver ranking'"
-          [attr.aria-label]="showStatistics ? 'Ocultar ranking' : 'Ver ranking'"
-          (click)="toggleStatistics()"
-        >
-          <mat-icon>{{ showStatistics ? 'leaderboard' : 'bar_chart' }}</mat-icon>
-          <span class="floating-menu__label">{{ showStatistics ? 'Ocultar' : 'Ranking' }}</span>
-        </button>
+          [ariaLabel]="showStatistics ? 'Ocultar ranking' : 'Ver ranking'"
+          (clicked)="toggleStatistics()"
+        >{{ showStatistics ? 'Ocultar' : 'Ranking' }}</app-floating-button>
 
-        <button
-          type="button"
-          class="floating-menu__button"
+        <app-floating-button
+          icon="history"
           title="Ir al historial"
-          aria-label="Ir al historial"
-          (click)="goToHistory()"
-        >
-          <mat-icon>history</mat-icon>
-          <span class="floating-menu__label">Historial</span>
-        </button>
+          ariaLabel="Ir al historial"
+          (clicked)="goToHistory()"
+        >Historial</app-floating-button>
       </div>
     </nav>
 
@@ -182,7 +164,7 @@
                           <span class="player-name">{{ match.pair1[1].name }}</span>
                           <span class="player-position">({{ match.pair1[1].position }})</span>
                         </div>
-                        <input type="number" [(ngModel)]="match.scorePair1" class="score-input" min="0" max="99" placeholder="0" />
+                        <input type="number" [(ngModel)]="match.scorePair1" class="score-input" min="0" max="99" placeholder="0" (focus)="clearOnZero(match, 'scorePair1')" />
                       </div>
 
                       <div class="vs">VS</div>
@@ -195,7 +177,7 @@
                           <span class="player-name">{{ match.pair2[1].name }}</span>
                           <span class="player-position">({{ match.pair2[1].position }})</span>
                         </div>
-                        <input type="number" [(ngModel)]="match.scorePair2" class="score-input" min="0" placeholder="0" />
+                        <input type="number" [(ngModel)]="match.scorePair2" class="score-input" min="0" placeholder="0" (focus)="clearOnZero(match, 'scorePair2')" />
                       </div>
                     }
 
@@ -212,19 +194,19 @@
                         </div>
                         <div class="editor-body-row">
                           <div class="player-names">{{ match.pair1[0].name }} / {{ match.pair1[1].name }}</div>
-                          <input type="number" [(ngModel)]="match.sets[0].pair1Games" class="set-input" min="0" max="99" placeholder="0" />
+                          <input type="number" [(ngModel)]="match.sets[0].pair1Games" class="set-input" min="0" max="99" placeholder="0" (focus)="clearOnZero(match, 'pair1Games', 0)" />
                           <input type="number" [(ngModel)]="match.sets[1].pair1Games" class="set-input" min="0" max="99" placeholder="0"
-                            [disabled]="!shouldShowSet(match, 1)" />
+                            [disabled]="!shouldShowSet(match, 1)" (focus)="clearOnZero(match, 'pair1Games', 1)" />
                           <input type="number" [(ngModel)]="match.sets[2].pair1Games" class="set-input" min="0" max="99" placeholder="0"
-                            [disabled]="!shouldShowSet(match, 2)" />
+                            [disabled]="!shouldShowSet(match, 2)" (focus)="clearOnZero(match, 'pair1Games', 2)" />
                         </div>
                         <div class="editor-body-row">
                           <div class="player-names">{{ match.pair2[0].name }} / {{ match.pair2[1].name }}</div>
-                          <input type="number" [(ngModel)]="match.sets[0].pair2Games" class="set-input" min="0" max="99" placeholder="0" />
+                          <input type="number" [(ngModel)]="match.sets[0].pair2Games" class="set-input" min="0" max="99" placeholder="0" (focus)="clearOnZero(match, 'pair2Games', 0)" />
                           <input type="number" [(ngModel)]="match.sets[1].pair2Games" class="set-input" min="0" max="99" placeholder="0"
-                            [disabled]="!shouldShowSet(match, 1)" />
+                            [disabled]="!shouldShowSet(match, 1)" (focus)="clearOnZero(match, 'pair2Games', 1)" />
                           <input type="number" [(ngModel)]="match.sets[2].pair2Games" class="set-input" min="0" max="99" placeholder="0"
-                            [disabled]="!shouldShowSet(match, 2)" />
+                            [disabled]="!shouldShowSet(match, 2)" (focus)="clearOnZero(match, 'pair2Games', 2)" />
                         </div>
                       </div>
                     }
@@ -244,12 +226,12 @@
                    <!-- Edit buttons -->
                    @if (editingMatch === match.number) {
                      <div class="edit-buttons">
-                       <app-primary-button variant="outline-violet" icon="check" (clicked)="saveScore(match)">
+                       <app-floating-button variant="success" icon="check" (clicked)="saveScore(match)">
                          Guardar
-                       </app-primary-button>
-                       <app-primary-button variant="danger" icon="close" (clicked)="clearEdit()">
+                       </app-floating-button>
+                       <app-floating-button variant="danger" icon="close" (clicked)="clearEdit()">
                          Cancelar
-                       </app-primary-button>
+                       </app-floating-button>
                      </div>
                    }
                 </div>

@@ -12,13 +12,14 @@ import { MatIconModule } from "@angular/material/icon";
 import { TournamentFacade } from "@domain/tournament/data-access/tournament.facade";
 import { Match, PlayerStats, SetScore } from "@shared/models/player.model";
 import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
+import { FloatingButtonComponent } from "@shared/components/floating-button/floating-button.component";
 import {
   isValidPointsInput,
   getMatchWinner as _getMatchWinner,
   getSetWinner as _getSetWinner,
   isSetComplete as _isSetComplete,
   isMatchComplete as _isMatchComplete,
-} from "@domain/tournament/data-access/tournament.service";
+} from "@domain/tournament/data-access/utils/tournament-scoring.utils";
 import { NotificationService } from "@shared/services/notification.service";
 
 @Component({
@@ -28,6 +29,7 @@ import { NotificationService } from "@shared/services/notification.service";
     FormsModule,
     MatIconModule,
     PrimaryButtonComponent,
+    FloatingButtonComponent,
   ],
   templateUrl: "./summary-page.component.html",
   styleUrl: "./summary-page.component.scss",
@@ -108,12 +110,13 @@ export class SummaryPageComponent implements OnInit {
   }
 
   toggleStatistics(): void {
-    this.showStatistics = !this.showStatistics;
+    const newValue = !this.showStatistics;
+    this.showStatistics = newValue;
     this.showMobileMenu = false;
     this.notifications.showSuccess(
-      this.showStatistics ? "Mostrando clasificación" : "Ocultando clasificación",
+      newValue ? "Mostrando clasificación" : "Ocultando clasificación",
     );
-    if (this.showStatistics) {
+    if (newValue) {
       this.updateStatistics();
       setTimeout(() => {
         this.statisticsSection()?.nativeElement.scrollIntoView({
@@ -307,6 +310,16 @@ export class SummaryPageComponent implements OnInit {
 
   trackSet(_idx: number): number {
     return _idx;
+  }
+
+  clearOnZero(match: Match, field: string, setIndex?: number): void {
+    if (setIndex !== undefined) {
+      const set = match.sets[setIndex] as unknown as Record<string, number | null>;
+      if (set[field] === 0) set[field] = null;
+    } else {
+      const m = match as unknown as Record<string, number | null | undefined>;
+      if (m[field] === 0) m[field] = null;
+    }
   }
 
 }

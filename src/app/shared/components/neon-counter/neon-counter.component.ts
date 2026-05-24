@@ -148,9 +148,9 @@ import {
         width: 44px;
         height: 44px;
         border-radius: 50%;
-        border: 2px solid rgba(204, 255, 0, 0.3);
-        background: rgba(204, 255, 0, 0.05);
-        color: #ccff00;
+        border: 2px solid rgba(var(--feature-accent-rgb, 204, 255, 0), 0.3);
+        background: rgba(var(--feature-accent-rgb, 204, 255, 0), 0.05);
+        color: var(--primary);
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -162,9 +162,9 @@ import {
       }
 
       .neon-btn:hover:not(:disabled) {
-        background: rgba(204, 255, 0, 0.15);
-        border-color: #ccff00;
-        box-shadow: 0 0 14px rgba(204, 255, 0, 0.35);
+        background: rgba(var(--feature-accent-rgb, 204, 255, 0), 0.15);
+        border-color: var(--primary);
+        box-shadow: 0 0 14px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.35);
       }
 
       .neon-btn:active:not(:disabled) {
@@ -182,14 +182,14 @@ import {
         position: relative;
         background: radial-gradient(
           ellipse at center,
-          rgba(204, 255, 0, 0.07) 0%,
+          rgba(var(--feature-accent-rgb, 204, 255, 0), 0.07) 0%,
           transparent 70%
         );
         box-shadow:
-          0 0 20px rgba(204, 255, 0, 0.12),
-          inset 0 0 30px rgba(204, 255, 0, 0.03);
+          0 0 20px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.12),
+          inset 0 0 30px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.03);
         border-radius: 12px;
-        border: 1px solid rgba(204, 255, 0, 0.1);
+        border: 1px solid rgba(var(--feature-accent-rgb, 204, 255, 0), 0.1);
       }
 
       .neon-track {
@@ -207,13 +207,13 @@ import {
         font-family: var(--font-thunder, "Impact"), sans-serif;
         font-size: 54px;
         font-weight: 900;
-        color: #ccff00;
+        color: var(--primary);
         line-height: 1;
         text-shadow:
-          0 0 7px rgba(204, 255, 0, 0.8),
-          0 0 14px rgba(204, 255, 0, 0.6),
-          0 0 28px rgba(204, 255, 0, 0.4),
-          0 0 56px rgba(204, 255, 0, 0.2);
+          0 0 7px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.8),
+          0 0 14px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.6),
+          0 0 28px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.4),
+          0 0 56px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.2);
         animation: neonPulse 2.4s ease-in-out infinite;
       }
 
@@ -221,17 +221,17 @@ import {
         0%,
         100% {
           text-shadow:
-            0 0 7px rgba(204, 255, 0, 0.8),
-            0 0 14px rgba(204, 255, 0, 0.6),
-            0 0 28px rgba(204, 255, 0, 0.4),
-            0 0 56px rgba(204, 255, 0, 0.2);
+            0 0 7px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.8),
+            0 0 14px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.6),
+            0 0 28px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.4),
+            0 0 56px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.2);
         }
         50% {
           text-shadow:
-            0 0 12px rgba(204, 255, 0, 1),
-            0 0 24px rgba(204, 255, 0, 0.8),
-            0 0 48px rgba(204, 255, 0, 0.6),
-            0 0 80px rgba(204, 255, 0, 0.3);
+            0 0 12px rgba(var(--feature-accent-rgb, 204, 255, 0), 1),
+            0 0 24px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.8),
+            0 0 48px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.6),
+            0 0 80px rgba(var(--feature-accent-rgb, 204, 255, 0), 0.3);
         }
       }
     `,

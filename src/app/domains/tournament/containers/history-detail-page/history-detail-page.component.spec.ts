@@ -488,4 +488,33 @@ describe('HistoryDetailPageComponent', () => {
       expect(getText('.match-number')).toContain('Partido 5');
     });
   });
+
+  describe('recordTypeLabel', () => {
+    it('returns empty string when record is null', () => {
+      component.record = null;
+      expect(component.recordTypeLabel()).toBe('');
+    });
+
+    it('returns "Torneo clásico" for classic type', () => {
+      component.record = makeRecord({ config: { ...makeRecord().config, type: 'classic' } as TournamentRecord['config'] });
+      expect(component.recordTypeLabel()).toBe('Torneo clásico');
+    });
+  });
+
+  describe('recordFormatLabel', () => {
+    it('returns empty string when record is null', () => {
+      component.record = null;
+      expect(component.recordFormatLabel()).toBe('');
+    });
+
+    it('returns seeded label for classic seeded', () => {
+      component.record = makeRecord({ config: { ...makeRecord().config, type: 'classic', seeded: true } as TournamentRecord['config'] });
+      expect(component.recordFormatLabel()).toBe('Cuadro con siembra');
+    });
+
+    it('returns unseeded label for classic non-seeded', () => {
+      component.record = makeRecord({ config: { ...makeRecord().config, type: 'classic', seeded: false } as TournamentRecord['config'] });
+      expect(component.recordFormatLabel()).toBe('Cuadro abierto');
+    });
+  });
 });

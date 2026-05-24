@@ -1,85 +1,95 @@
-import { Injectable, inject, signal, DestroyRef } from '@angular/core';
-import { TournamentService } from './tournament.service';
-import { Match, SetScore, TournamentConfig, PlayerStats, TournamentRecord } from '@shared/models/player.model';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Injectable, inject, signal } from '@angular/core';
+import {
+  ClassicTournamentConfig,
+  Match,
+  SetScore,
+  TournamentConfig,
+  PlayerStats,
+  TournamentRecord,
+} from '@shared/models/player.model';
+import { TournamentCommandsService } from './commands/tournament-commands.service';
+import { TournamentStoreService } from './state/tournament-store.service';
 
 @Injectable({ providedIn: 'root' })
 export class TournamentFacade {
-  private readonly apiService = inject(TournamentService);
-  private readonly destroyRef = inject(DestroyRef);
-
-  private readonly _matches = signal<Match[]>([]);
-  private readonly _config = signal<TournamentConfig | null>(null);
+  private readonly commands = inject(TournamentCommandsService);
+  private readonly store = inject(TournamentStoreService);
   private readonly _loading = signal(false);
-  private readonly _history = signal<TournamentRecord[]>([]);
-  private readonly _currentTournamentId = signal<string | null>(null);
 
-  readonly matches = this._matches.asReadonly();
-  readonly config = this._config.asReadonly();
+  readonly matches = this.store.matches;
+  readonly config = this.store.config;
   readonly loading = this._loading.asReadonly();
-  readonly history = this._history.asReadonly();
-  readonly currentTournamentId = this._currentTournamentId.asReadonly();
-
-  constructor() {
-    this.apiService.matches$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(m => this._matches.set(m));
-
-    this.apiService.config$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(c => this._config.set(c));
-
-    this.apiService.history$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(h => this._history.set(h));
-
-    this.apiService.currentTournamentId$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(id => this._currentTournamentId.set(id));
-  }
+  readonly history = this.store.history;
+  readonly currentTournamentId = this.store.currentTournamentId;
 
   generateTournament(config: TournamentConfig): string {
     this._loading.set(true);
     try {
-      return this.apiService.generateTournament(config);
+      return this.commands.generateTournament(config);
+    } finally {
+      this._loading.set(false);
+    }
+  }
+
+  generateClassicTournament(config: ClassicTournamentConfig): string {
+    this._loading.set(true);
+    try {
+      return this.commands.generateClassicTournament(config);
     } finally {
       this._loading.set(false);
     }
   }
 
   updateScore(matchNumber: number, scorePair1: number, scorePair2: number): void {
-    this.apiService.updateScore(matchNumber, scorePair1, scorePair2);
+    this.commands.updateScore(matchNumber, scorePair1, scorePair2);
   }
 
   updateSetScores(matchNumber: number, sets: SetScore[]): void {
-    this.apiService.updateSetScores(matchNumber, sets);
+    this.commands.updateSetScores(matchNumber, sets);
+  }
+
+  updateClassicMatchWinner(
+    matchNumber: number,
+    winner: "pair1" | "pair2",
+  ): void {
+    this.commands.updateClassicMatchWinner(matchNumber, winner);
+  }
+
+  clearClassicMatchResult(matchNumber: number): void {
+    this.commands.clearClassicMatchResult(matchNumber);
   }
 
   calculateStatistics(): PlayerStats[] {
-    const config = this._config();
-    if (config?.mode === 'fixed-pairs') {
-      return this.apiService.calculatePairStatistics();
+    const config = this.config();
+    if (!config) {
+      return [];
     }
-    return this.apiService.calculateStatistics();
+    if (config.type === 'classic') {
+      return [];
+    }
+    if (config?.mode === 'fixed-pairs') {
+      return this.commands.calculatePairStatistics();
+    }
+    return this.commands.calculateStatistics();
   }
 
   generateSummary(matches: Match[]): string {
-    return this.apiService.generateSummary(matches);
+    return this.commands.generateSummary(matches);
   }
 
   loadTournament(recordId: string): TournamentRecord | null {
-    return this.apiService.loadTournament(recordId);
+    return this.commands.loadTournament(recordId);
   }
 
   deleteHistoryRecord(recordId: string): void {
-    this.apiService.deleteHistoryRecord(recordId);
+    this.commands.deleteHistoryRecord(recordId);
   }
 
    clearCurrentTournamentId(): void {
-    this.apiService.clearCurrentTournamentId();
+    this.commands.clearCurrentTournamentId();
   }
 
   clearData(): void {
-    this.apiService.clearData();
+    this.commands.clearData();
   }
 }

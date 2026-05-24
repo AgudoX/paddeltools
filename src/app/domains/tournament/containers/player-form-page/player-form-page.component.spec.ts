@@ -5,7 +5,7 @@ import { NotificationService } from '@shared/services/notification.service';
 import { Router } from '@angular/router';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { signal } from '@angular/core';
-import { TournamentRecord } from '@shared/models/player.model';
+import { TournamentConfig, TournamentRecord } from '@shared/models/player.model';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('PlayerFormPageComponent', () => {
@@ -20,6 +20,7 @@ describe('PlayerFormPageComponent', () => {
     config: ReturnType<typeof signal>;
     history: ReturnType<typeof signal>;
     generateTournament: ReturnType<typeof vi.fn>;
+    generateClassicTournament: ReturnType<typeof vi.fn>;
     clearData: ReturnType<typeof vi.fn>;
     clearCurrentTournamentId: ReturnType<typeof vi.fn>;
   };
@@ -31,6 +32,7 @@ describe('PlayerFormPageComponent', () => {
       config: signal(null),
       history: signal<TournamentRecord[]>([]),
       generateTournament: vi.fn().mockReturnValue('tourney-1'),
+      generateClassicTournament: vi.fn().mockReturnValue('classic-1'),
       clearData: vi.fn(),
       clearCurrentTournamentId: vi.fn(),
     };
@@ -52,6 +54,7 @@ describe('PlayerFormPageComponent', () => {
   describe('ngOnInit', () => {
     it('initializes with defaults when no config', () => {
       fixture.detectChanges();
+      expect(component.competitionType()).toBe('americano');
       expect(component.numberOfPlayers).toBe(8);
       expect(component.numberOfRounds).toBe(3);
       expect(component.mode).toBe('free');
@@ -281,31 +284,31 @@ describe('PlayerFormPageComponent', () => {
   describe('duplicateName', () => {
     it('returns true when name exists in history', () => {
       facadeSpy.history.set([
-        { id: '1', label: 'My Torneo', createdAt: '', config: {} as any, matches: [] },
+        { id: '1', label: 'My Torneo', createdAt: '', config: {} as TournamentConfig, matches: [] },
       ]);
       component.tournamentName = 'My Torneo';
-      expect((component as any).duplicateName()).toBe(true);
+      expect((component as unknown as { duplicateName: () => boolean }).duplicateName()).toBe(true);
     });
 
     it('returns false when name is unique', () => {
       facadeSpy.history.set([
-        { id: '1', label: 'Other', createdAt: '', config: {} as any, matches: [] },
+        { id: '1', label: 'Other', createdAt: '', config: {} as TournamentConfig, matches: [] },
       ]);
       component.tournamentName = 'My Torneo';
-      expect((component as any).duplicateName()).toBe(false);
+      expect((component as unknown as { duplicateName: () => boolean }).duplicateName()).toBe(false);
     });
 
     it('is case-insensitive', () => {
       facadeSpy.history.set([
-        { id: '1', label: 'Mi Torneo', createdAt: '', config: {} as any, matches: [] },
+        { id: '1', label: 'Mi Torneo', createdAt: '', config: {} as TournamentConfig, matches: [] },
       ]);
       component.tournamentName = 'MI TORNEO';
-      expect((component as any).duplicateName()).toBe(true);
+      expect((component as unknown as { duplicateName: () => boolean }).duplicateName()).toBe(true);
     });
 
     it('returns false when name is empty', () => {
       component.tournamentName = '   ';
-      expect((component as any).duplicateName()).toBe(false);
+      expect((component as unknown as { duplicateName: () => boolean }).duplicateName()).toBe(false);
     });
   });
 
@@ -366,7 +369,7 @@ describe('PlayerFormPageComponent', () => {
     it('returns error for duplicate tournament name', () => {
       component.tournamentName = 'Test Name';
       facadeSpy.history.set([
-        { id: '1', label: 'Test Name', createdAt: '', config: {} as any, matches: [] },
+        { id: '1', label: 'Test Name', createdAt: '', config: {} as TournamentConfig, matches: [] },
       ]);
       expect(component.validate()).toBe(false);
       expect(component.errors).toContain('Ya existe un torneo guardado con ese nombre');
@@ -414,6 +417,55 @@ describe('PlayerFormPageComponent', () => {
     });
   });
 
+  describe('validate classic mode', () => {
+    beforeEach(() => {
+      component.setCompetitionType('classic');
+      component.numberOfPlayers = 8;
+      component.mode = 'fixed-pairs';
+      component.players = [
+        { id: 1, name: 'Alice', position: 'right', pairId: 1 },
+        { id: 2, name: 'Bob', position: 'backhand', pairId: 1 },
+        { id: 3, name: 'Charlie', position: 'either', pairId: 2 },
+        { id: 4, name: 'Diana', position: 'right', pairId: 2 },
+        { id: 5, name: 'Eve', position: 'backhand', pairId: 3 },
+        { id: 6, name: 'Frank', position: 'either', pairId: 3 },
+        { id: 7, name: 'Grace', position: 'right', pairId: 4 },
+        { id: 8, name: 'Hank', position: 'backhand', pairId: 4 },
+      ];
+      component.pairs = [
+        { id: 1, player1: { id: 1, name: 'Alice', position: 'right', pairId: 1 }, player2: { id: 2, name: 'Bob', position: 'backhand', pairId: 1 } },
+        { id: 2, player1: { id: 3, name: 'Charlie', position: 'either', pairId: 2 }, player2: { id: 4, name: 'Diana', position: 'right', pairId: 2 } },
+        { id: 3, player1: { id: 5, name: 'Eve', position: 'backhand', pairId: 3 }, player2: { id: 6, name: 'Frank', position: 'either', pairId: 3 } },
+        { id: 4, player1: { id: 7, name: 'Grace', position: 'right', pairId: 4 }, player2: { id: 8, name: 'Hank', position: 'backhand', pairId: 4 } },
+      ];
+    });
+
+    it('returns error when players < 4 in classic mode', () => {
+      component.numberOfPlayers = 2;
+      expect(component.validate()).toBe(false);
+      expect(component.errors).toContain('Debe haber al menos 4 jugadores');
+    });
+
+    it('returns error when players is not multiple of 2 in classic mode', () => {
+      component.numberOfPlayers = 7;
+      expect(component.validate()).toBe(false);
+      expect(component.errors).toContain('El número de jugadores debe ser múltiplo de 2');
+    });
+
+    it('returns error when pair has empty names in classic mode', () => {
+      component.pairs[0].player1.name = '';
+      expect(component.validate()).toBe(false);
+      expect(component.errors).toContain('La pareja 1 debe tener ambos nombres completos');
+    });
+
+    it('returns error for duplicate names in classic mode', () => {
+      component.pairs[0].player1.name = 'Alice';
+      component.pairs[1].player1.name = 'alice';
+      expect(component.validate()).toBe(false);
+      expect(component.errors).toContain('Los nombres de todas las parejas deben ser únicos');
+    });
+  });
+
   describe('generateTournament', () => {
     beforeEach(() => {
       component.numberOfPlayers = 8;
@@ -458,6 +510,96 @@ describe('PlayerFormPageComponent', () => {
     });
   });
 
+  describe('competition type tabs', () => {
+    beforeEach(() => {
+      fixture.detectChanges();
+    });
+
+    it('switches to classic mode and applies the classic theme', () => {
+      component.setCompetitionType('classic');
+      fixture.detectChanges();
+
+      expect(component.competitionType()).toBe('classic');
+      expect(component.isClassic()).toBe(true);
+      expect(component.primaryActionLabel()).toBe('Crear Torneo');
+      expect(fixture.nativeElement.querySelector('.arena')?.classList.contains('arena--classic')).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('Cuadro clásico y exportación PDF');
+    });
+
+    it('restores americano constraints when switching back from classic', () => {
+      component.numberOfPlayers = 6;
+      component.setCompetitionType('classic');
+      component.setCompetitionType('americano');
+
+      expect(component.competitionType()).toBe('americano');
+      expect(component.numberOfPlayers).toBe(8);
+    });
+
+    it('shows feedback instead of generating when classic primary action is pressed', () => {
+      component.setCompetitionType('classic');
+      component.handlePrimaryAction();
+
+      expect(facadeSpy.generateTournament).not.toHaveBeenCalled();
+      expect(facadeSpy.generateClassicTournament).toHaveBeenCalled();
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/classic-tournament', 'classic-1']);
+    });
+  });
+
+  describe('handlePrimaryAction in americano mode', () => {
+    beforeEach(() => {
+      component.numberOfPlayers = 8;
+      component.numberOfRounds = 3;
+      component.mode = 'free';
+      component.players = [
+        { id: 1, name: 'A', position: 'right' },
+        { id: 2, name: 'B', position: 'backhand' },
+        { id: 3, name: 'C', position: 'either' },
+        { id: 4, name: 'D', position: 'right' },
+        { id: 5, name: 'E', position: 'backhand' },
+        { id: 6, name: 'F', position: 'either' },
+        { id: 7, name: 'G', position: 'right' },
+        { id: 8, name: 'H', position: 'backhand' },
+      ];
+    });
+
+    it('calls generateTournament when not classic', () => {
+      component.setCompetitionType('americano');
+      component.handlePrimaryAction();
+      expect(facadeSpy.generateTournament).toHaveBeenCalled();
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/tournament', 'tourney-1']);
+    });
+  });
+
+  describe('generateClassicTournament error', () => {
+    beforeEach(() => {
+      component.numberOfPlayers = 8;
+      component.mode = 'fixed-pairs';
+      component.players = [
+        { id: 1, name: 'A', position: 'right', pairId: 1 },
+        { id: 2, name: 'B', position: 'backhand', pairId: 1 },
+      ];
+      component.pairs = [
+        { id: 1, player1: { id: 1, name: 'A', position: 'right', pairId: 1 }, player2: { id: 2, name: 'B', position: 'backhand', pairId: 1 } },
+      ];
+    });
+
+    it('catches error and adds to errors', () => {
+      facadeSpy.generateClassicTournament.mockImplementation(() => { throw new Error('Classic error'); });
+      component.setCompetitionType('classic');
+      component.handlePrimaryAction();
+      expect(component.errors).toContain('Classic error');
+      expect(component.loading).toBe(false);
+    });
+
+    it('handles non-Error throws', () => {
+      facadeSpy.generateClassicTournament.mockImplementation(() => { throw 'string throw'; });
+      component.setCompetitionType('classic');
+      component.handlePrimaryAction();
+      expect(component.errors).toContain('Error al crear el torneo clásico');
+      expect(component.loading).toBe(false);
+    });
+  });
+
   describe('goToHistory', () => {
     it('clears current id and navigates', () => {
       component.goToHistory();
@@ -468,6 +610,7 @@ describe('PlayerFormPageComponent', () => {
 
   describe('clear', () => {
     beforeEach(() => {
+      component.setCompetitionType('classic');
       component.tournamentName = 'Test';
       component.numberOfPlayers = 12;
       component.mode = 'fixed-pairs';
@@ -480,6 +623,7 @@ describe('PlayerFormPageComponent', () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       component.clear();
       expect(facadeSpy.clearData).toHaveBeenCalled();
+      expect(component.competitionType()).toBe('americano');
       expect(component.tournamentName).toBe('');
       expect(component.numberOfPlayers).toBe(8);
       expect(component.mode).toBe('free');

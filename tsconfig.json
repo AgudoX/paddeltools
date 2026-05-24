@@ -25,6 +25,7 @@
       "@shared/*": ["./src/app/shared/*"],
       "@domain/*": ["./src/app/domains/*"],
       "@env/*": ["./src/environments/*"],
+      "@styles/*": ["./src/styles/*"],
     },
     "types": ["vitest/globals"],
   },

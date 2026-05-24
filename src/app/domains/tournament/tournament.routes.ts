@@ -16,6 +16,13 @@ export const tournamentRoutes: Routes = [
       ),
   },
   {
+    path: 'classic-tournament/:id',
+    loadComponent: () =>
+      import('./containers/classic-tournament-page/classic-tournament-page.component').then(
+        (m) => m.ClassicTournamentPageComponent
+      ),
+  },
+  {
     path: 'summary',
     redirectTo: '',
     pathMatch: 'full',

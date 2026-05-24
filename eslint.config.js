@@ -36,7 +36,7 @@ const vitestGlobals = {
 };
 
 module.exports = [
-  { ignores: ["dist/**", "node_modules/**", ".angular/**"] },
+  { ignores: ["dist/**", "node_modules/**", ".angular/**", "vitest.config.ts"] },
   {
     files: ["**/*.ts"],
     languageOptions: {

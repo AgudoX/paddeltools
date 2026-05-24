@@ -1,11 +1,39 @@
 .arena {
+  --feature-accent-rgb: 204, 255, 0;
+  --primary: #ccff00;
+  --primary-bright: #dbff33;
+  --primary-deep: #a3cc00;
+  --on-primary: #000000;
+  --neon-shadow-soft: rgba(204, 255, 0, 0.3);
+  --neon-shadow-mid: rgba(204, 255, 0, 0.2);
+  --neon-shadow-strong: rgba(204, 255, 0, 0.6);
+  --neon-shadow-hot: rgba(204, 255, 0, 0.4);
+  --border-focus: var(--primary);
+  --shadow-focus: 0 0 0 3px rgba(var(--feature-accent-rgb), 0.25);
   min-height: 100vh;
   padding: var(--space-md);
   background: var(--canvas-dark);
+  transition:
+    background var(--transition-slow),
+    color var(--transition-slow);
 
   @media (min-width: 768px) {
     padding: var(--space-xl);
   }
+}
+
+.arena--classic {
+  --feature-accent-rgb: 177, 76, 255;
+  --primary: var(--violet-500);
+  --primary-bright: #c49dff;
+  --primary-deep: var(--violet-600);
+  --on-primary: var(--on-violet);
+  --neon-shadow-soft: rgba(177, 76, 255, 0.28);
+  --neon-shadow-mid: rgba(177, 76, 255, 0.18);
+  --neon-shadow-strong: rgba(216, 150, 255, 0.52);
+  --neon-shadow-hot: rgba(177, 76, 255, 0.32);
+  --border-focus: var(--violet-500);
+  --shadow-focus: 0 0 0 3px rgba(var(--feature-accent-rgb), 0.22);
 }
 
 .arena-card {
@@ -16,8 +44,12 @@
   border: 1px solid var(--hairline-dark);
   padding: var(--space-lg);
   box-shadow:
-    0 0 24px rgba(204, 255, 0, 0.15),
-    0 0 80px rgba(204, 255, 0, 0.08);
+    0 0 24px rgba(var(--feature-accent-rgb), 0.15),
+    0 0 80px rgba(var(--feature-accent-rgb), 0.08);
+  transition:
+    box-shadow var(--transition-slow),
+    border-color var(--transition-slow),
+    background var(--transition-slow);
 
   @media (min-width: 768px) {
     padding: var(--space-xxxl);
@@ -77,6 +109,10 @@
   @media (min-width: 768px) {
     font-size: var(--font-size-xl);
   }
+}
+
+.arena--classic .hero-subtitle {
+  color: #eadeff;
 }
 
 .hero-cta {
@@ -251,6 +287,7 @@
   &.active {
     background: var(--primary);
     color: var(--on-primary);
+    box-shadow: 0 10px 18px rgba(var(--feature-accent-rgb), 0.22);
   }
 }
 
@@ -308,4 +345,7 @@ label {
   }
 }
 
-
+.arena--classic .footer-actions,
+.arena--classic .hero {
+  border-color: rgba(var(--feature-accent-rgb), 0.18);
+}

@@ -1,12 +1,21 @@
-<div class="arena">
+<div
+  class="arena"
+  [class.arena--classic]="isClassic()"
+  [attr.data-competition]="competitionType()"
+>
   <div class="arena-card">
+    <app-tournament-type-tabs
+      [active]="competitionType()"
+      (selected)="setCompetitionType($event)"
+    />
+
     <!-- ═══ HERO ─────────────────────── -->
     <header class="hero">
        <div class="hero-brand">
          <app-padelcraft-logo class="hero-icon" [size]="52" />
          <h1 class="hero-title neon-title" data-text="Padeleria">Padeleria</h1>
        </div>
-      <p class="hero-subtitle">Organiza tu americano de pádel al instante</p>
+      <p class="hero-subtitle">{{ heroSubtitle() }}</p>
 
       @if (errors.length > 0) {
         <div class="toast toast-error">
@@ -20,13 +29,13 @@
 
       <div class="hero-cta">
         <app-primary-button
-          variant="primary"
+          [variant]="isClassic() ? 'violet' : 'primary'"
           icon="bolt"
           [loading]="loading"
-          (clicked)="generateTournament()"
+          (clicked)="handlePrimaryAction()"
         >
-          Generar Americano
-          <span loading-label>Generando...</span>
+          {{ primaryActionLabel() }}
+          <span loading-label>{{ primaryActionLoadingLabel() }}</span>
         </app-primary-button>
 
         <app-primary-button
@@ -42,7 +51,7 @@
     <!-- ═══ TOURNAMENT NAME ──────────── -->
     <section class="section">
       <div class="field">
-        <label for="tournamentName">Nombre del Torneo</label>
+        <label for="tournamentName">{{ tournamentNameLabel() }}</label>
         <input
           id="tournamentName"
           type="text"
@@ -59,82 +68,97 @@
       </div>
     </section>
 
-    <!-- ═══ CONFIG ───────────────────── -->
-    <section class="section">
-      <h2 class="section-title">Configuración</h2>
+    @if (!isClassic()) {
+      <!-- ═══ CONFIG ───────────────────── -->
+      <section class="section">
+        <h2 class="section-title">Configuración</h2>
 
-      <div class="config-grid">
-        <div class="field">
-          <label>Número de Jugadores</label>
-          <app-neon-counter
-            [value]="numberOfPlayers"
-            [min]="8"
-            [step]="4"
-            (changed)="onNeonPlayersChange($event)"
-          />
-          <small class="field-hint">Múltiplo de 4 (mín. 8)</small>
+        <div class="config-grid">
+          <div class="field">
+            <label>Número de Jugadores</label>
+            <app-neon-counter
+              [value]="numberOfPlayers"
+              [min]="8"
+              [step]="4"
+              (changed)="onNeonPlayersChange($event)"
+            />
+            <small class="field-hint">Múltiplo de 4 (mín. 8)</small>
+          </div>
+
+          <div class="field">
+            <label>Rondas</label>
+            <app-neon-counter
+              [value]="numberOfRounds"
+              [min]="1"
+              (changed)="onNeonRoundsChange($event)"
+            />
+            <small class="field-hint">
+              {{ numberOfPlayers / 4 }} partido(s) por ronda
+            </small>
+          </div>
         </div>
 
         <div class="field">
-          <label>Rondas</label>
-          <app-neon-counter
-            [value]="numberOfRounds"
-            [min]="1"
-            (changed)="onNeonRoundsChange($event)"
-          />
+          <label for="mode">Modo de Emparejamiento</label>
+          <select
+            id="mode"
+            [(ngModel)]="mode"
+            (change)="onModeChange()"
+            class="form-select"
+          >
+            <option value="free">Libre (rotación completa)</option>
+            <option value="fixed-pairs">Parejas Fijas</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Modo de Puntuación</label>
+          <div class="scoring-toggle">
+            <button
+              type="button"
+              class="scoring-opt"
+              [class.active]="scoringMode === 'sets'"
+              (click)="scoringMode = 'sets'"
+            >
+              <mat-icon>format_list_numbered</mat-icon>
+              Por Sets
+            </button>
+            <button
+              type="button"
+              class="scoring-opt"
+              [class.active]="scoringMode === 'points'"
+              (click)="scoringMode = 'points'"
+            >
+              <mat-icon>exposure</mat-icon>
+              Puntos Directos
+            </button>
+          </div>
           <small class="field-hint">
-            {{ numberOfPlayers / 4 }} partido(s) por ronda
+            @if (scoringMode === 'sets') {
+              Al mejor de 3 sets. Cada set se gana por 6 juegos con diferencia de 2 (o tie-break en 6-6).
+            } @else {
+              Puntuación directa sin empates. Diferencia mínima de 2 puntos.
+            }
           </small>
         </div>
-      </div>
-
-      <div class="field">
-        <label for="mode">Modo de Emparejamiento</label>
-        <select
-          id="mode"
-          [(ngModel)]="mode"
-          (change)="onModeChange()"
-          class="form-select"
-        >
-          <option value="free">Libre (rotación completa)</option>
-          <option value="fixed-pairs">Parejas Fijas</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Modo de Puntuación</label>
-        <div class="scoring-toggle">
-          <button
-            type="button"
-            class="scoring-opt"
-            [class.active]="scoringMode === 'sets'"
-            (click)="scoringMode = 'sets'"
-          >
-            <mat-icon>format_list_numbered</mat-icon>
-            Por Sets
-          </button>
-          <button
-            type="button"
-            class="scoring-opt"
-            [class.active]="scoringMode === 'points'"
-            (click)="scoringMode = 'points'"
-          >
-            <mat-icon>exposure</mat-icon>
-            Puntos Directos
-          </button>
-        </div>
-        <small class="field-hint">
-          @if (scoringMode === 'sets') {
-            Al mejor de 3 sets. Cada set se gana por 6 juegos con diferencia de 2 (o tie-break en 6-6).
-          } @else {
-            Puntuación directa sin empates. Diferencia mínima de 2 puntos.
-          }
-        </small>
-      </div>
-    </section>
+      </section>
+    } @else {
+      <section class="section">
+        <app-classic-tournament-form
+          [numberOfPlayers]="numberOfPlayers"
+          [selectedFormat]="classicFormat"
+          [seeded]="classicSeeded"
+          [thirdPlaceMatch]="classicThirdPlaceMatch"
+          (numberOfPlayersChanged)="onClassicPlayersChange($event)"
+          (formatChanged)="classicFormat = $event"
+          (seededChanged)="classicSeeded = $event"
+          (thirdPlaceMatchChanged)="classicThirdPlaceMatch = $event"
+        />
+      </section>
+    }
 
     <!-- ═══ PLAYERS (free mode) ─────── -->
-    @if (mode === 'free') {
+    @if (!isClassic() && mode === 'free') {
       <section class="section">
         <h2 class="section-title">
           Jugadores
@@ -152,12 +176,18 @@
       </section>
     }
 
-    <!-- ═══ PAIRS (fixed mode) ──────── -->
-    @if (mode === 'fixed-pairs') {
+    <!-- ═══ PAIRS (fixed mode / classic) ──────── -->
+    @if (mode === 'fixed-pairs' || isClassic()) {
       <section class="section">
-        <h2 class="section-title">Parejas</h2>
+        <h2 class="section-title">
+          {{ isClassic() ? 'Parejas del Cuadro' : 'Parejas' }}
+        </h2>
         <p class="section-desc">
-          Define las parejas que jugarán juntas todo el torneo
+          @if (isClassic()) {
+            Define las parejas que competirán en el cuadro clásico.
+          } @else {
+            Define las parejas que jugarán juntas todo el torneo
+          }
         </p>
         <div class="pairs-grid">
           @for (pair of pairs; track pair.id; let i = $index) {
@@ -182,13 +212,13 @@
       </app-primary-button>
 
       <app-primary-button
-        variant="primary"
+        [variant]="isClassic() ? 'violet' : 'primary'"
         icon="bolt"
         [loading]="loading"
-        (clicked)="generateTournament()"
+        (clicked)="handlePrimaryAction()"
       >
-        Generar Americano
-        <span loading-label>Generando...</span>
+        {{ primaryActionLabel() }}
+        <span loading-label>{{ primaryActionLoadingLabel() }}</span>
       </app-primary-button>
     </footer>
   </div>

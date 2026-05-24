@@ -11,6 +11,7 @@ import { MatIconModule } from "@angular/material/icon";
 import { TournamentFacade } from "@domain/tournament/data-access/tournament.facade";
 import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
 import { PadelCraftLogoComponent } from "@shared/components/padelcraft-logo/padelcraft-logo.component";
+import { TournamentRecord } from "@shared/models/player.model";
 
 @Component({
   selector: "app-history-page",
@@ -57,17 +58,8 @@ import { PadelCraftLogoComponent } from "@shared/components/padelcraft-logo/pade
                 <div class="history-meta">
                   <span class="history-label">{{ record.label }}</span>
                   <span class="history-info">
-                    {{
-                      record.config.mode === "fixed-pairs"
-                        ? "Parejas fijas"
-                        : "Libre"
-                    }}
-                    ·
-                    {{
-                      record.config.scoringMode === "sets"
-                        ? "Por sets"
-                        : "Puntos directos"
-                    }}
+                    {{ recordTypeLabel(record) }}
+                    · {{ recordFormatLabel(record) }}
                     · {{ record.matches.length }} partidos ·
                     {{ record.config.players.length }} jugadores
                   </span>
@@ -147,7 +139,8 @@ export class HistoryPageComponent {
   }
 
   viewTournament(id: string): void {
-    this.router.navigate(["/tournament", id]);
+    const record = this.facade.history().find((item) => item.id === id);
+    this.router.navigate(this.routeForRecord(record));
   }
 
   onDelete(id: string): void {
@@ -157,7 +150,8 @@ export class HistoryPageComponent {
   backToSummary(): void {
     const currentId = this.facade.currentTournamentId();
     if (currentId) {
-      this.router.navigate(["/tournament", currentId]);
+      const record = this.facade.history().find((item) => item.id === currentId);
+      this.router.navigate(this.routeForRecord(record ?? currentId));
     } else {
       this.router.navigate(["/"]);
     }
@@ -165,5 +159,35 @@ export class HistoryPageComponent {
 
   backToForm(): void {
     this.router.navigate(["/"]);
+  }
+
+  protected recordTypeLabel(record: TournamentRecord): string {
+    if (record.config.type === "classic") {
+      return "Torneo clásico";
+    }
+
+    return record.config.mode === "fixed-pairs" ? "Parejas fijas" : "Libre";
+  }
+
+  protected recordFormatLabel(record: TournamentRecord): string {
+    if (record.config.type === "classic") {
+      return record.config.seeded ? "Cuadro con siembra" : "Cuadro abierto";
+    }
+
+    return record.config.scoringMode === "sets" ? "Por sets" : "Puntos directos";
+  }
+
+  private routeForRecord(record: TournamentRecord | string | undefined): string[] {
+    if (!record) {
+      return ["/"];
+    }
+
+    if (typeof record === "string") {
+      return ["/tournament", record];
+    }
+
+    return record.config.type === "classic"
+      ? ["/classic-tournament", record.id]
+      : ["/tournament", record.id];
   }
 }

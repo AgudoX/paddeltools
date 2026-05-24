@@ -3,6 +3,8 @@ import {
   OnInit,
   inject,
   ChangeDetectionStrategy,
+  computed,
+  signal,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -10,6 +12,10 @@ import { Router } from "@angular/router";
 import { MatIconModule } from "@angular/material/icon";
 import { TournamentFacade } from "@domain/tournament/data-access/tournament.facade";
 import {
+  ClassicTournamentConfig,
+  ClassicTournamentFormat,
+  CompetitionType,
+  Pair,
   Player,
   PairingMode,
   ScoringMode,
@@ -18,6 +24,8 @@ import {
 import { PrimaryButtonComponent } from "@shared/components/primary-button/primary-button.component";
 import { PlayerCardComponent } from "@domain/tournament/components/player-card/player-card.component";
 import { PairCardComponent } from "@domain/tournament/components/pair-card/pair-card.component";
+import { ClassicTournamentFormComponent } from "@domain/tournament/components/classic-tournament-form/classic-tournament-form.component";
+import { TournamentTypeTabsComponent } from "@domain/tournament/components/tournament-type-tabs/tournament-type-tabs.component";
 import { NeonCounterComponent } from "@shared/components/neon-counter/neon-counter.component";
 import { PadelCraftLogoComponent } from "@shared/components/padelcraft-logo/padelcraft-logo.component";
 import { NotificationService } from "@shared/services/notification.service";
@@ -38,6 +46,8 @@ interface PairForm {
     PrimaryButtonComponent,
     PlayerCardComponent,
     PairCardComponent,
+    ClassicTournamentFormComponent,
+    TournamentTypeTabsComponent,
     NeonCounterComponent,
     PadelCraftLogoComponent,
   ],
@@ -50,11 +60,31 @@ export class PlayerFormPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly notifications = inject(NotificationService);
 
+  readonly competitionType = signal<CompetitionType>("americano");
+  readonly isClassic = computed(() => this.competitionType() === "classic");
+  readonly heroSubtitle = computed(() =>
+    this.isClassic()
+      ? "Diseña cuadros clásicos, prepara el bracket y deja listo el PDF"
+      : "Organiza tu americano de pádel al instante"
+  );
+  readonly primaryActionLabel = computed(() =>
+    this.isClassic() ? "Crear Torneo" : "Generar Americano"
+  );
+  readonly primaryActionLoadingLabel = computed(() =>
+    this.isClassic() ? "Preparando..." : "Generando..."
+  );
+  readonly tournamentNameLabel = computed(() =>
+    this.isClassic() ? "Nombre del Torneo" : "Nombre del Americano"
+  );
+
   tournamentName = "";
   numberOfPlayers = 8;
   numberOfRounds = 3;
   mode: PairingMode = "free";
   scoringMode: ScoringMode = "sets";
+  classicFormat: ClassicTournamentFormat = "single-elimination";
+  classicSeeded = true;
+  classicThirdPlaceMatch = false;
   players: Player[] = [];
   pairs: PairForm[] = [];
   errors: string[] = [];
@@ -65,17 +95,30 @@ export class PlayerFormPageComponent implements OnInit {
     if (config) {
       this.tournamentName = "";
       this.numberOfPlayers = config.numberOfPlayers;
-      this.numberOfRounds = config.numberOfRounds;
-      this.mode = config.mode;
-      this.scoringMode = config.scoringMode ?? "sets";
       this.players = [...config.players];
 
-      if (this.mode === "fixed-pairs") {
+      if (config.type === "classic") {
+        this.competitionType.set("classic");
+        this.classicFormat = config.format;
+        this.classicSeeded = config.seeded;
+        this.classicThirdPlaceMatch = config.thirdPlaceMatch;
+        this.pairs = config.pairs.map((pair) => ({
+          id: pair.id,
+          player1: { ...pair.player1 },
+          player2: { ...pair.player2 },
+        }));
+      } else {
+        this.numberOfRounds = config.numberOfRounds;
+        this.mode = config.mode;
+        this.scoringMode = config.scoringMode ?? "sets";
+      }
+
+      if (this.mode === "fixed-pairs" || this.isClassic()) {
         this.convertPlayersToPairs();
       }
     }
 
-    if (this.players.length === 0) {
+    if (this.players.length === 0 && this.pairs.length === 0) {
       this.updateNumberOfPlayers();
     }
   }
@@ -135,7 +178,7 @@ export class PlayerFormPageComponent implements OnInit {
   }
 
   updateNumberOfPlayers(): void {
-    if (this.mode === "fixed-pairs") {
+    if (this.mode === "fixed-pairs" || this.isClassic()) {
       const expectedPairs = this.numberOfPlayers / 2;
       const diff = expectedPairs - this.pairs.length;
 
@@ -210,6 +253,11 @@ export class PlayerFormPageComponent implements OnInit {
     this.numberOfRounds = Math.max(1, value);
   }
 
+  onClassicPlayersChange(value: number): void {
+    this.numberOfPlayers = Math.max(4, value);
+    this.updateNumberOfPlayers();
+  }
+
   onModeChange(): void {
     if (this.mode === "free") {
       this.players.forEach((p) => (p.pairId = undefined));
@@ -254,6 +302,43 @@ export class PlayerFormPageComponent implements OnInit {
   validate(): boolean {
     this.errors = [];
 
+    if (this.duplicateName()) {
+      this.errors.push("Ya existe un torneo guardado con ese nombre");
+    }
+
+    if (this.isClassic()) {
+      if (this.numberOfPlayers < 4) {
+        this.errors.push("Debe haber al menos 4 jugadores");
+      }
+
+      if (this.numberOfPlayers % 2 !== 0) {
+        this.errors.push("El número de jugadores debe ser múltiplo de 2");
+      }
+
+      this.convertPairsToPlayers();
+
+      this.pairs.forEach((pair, index) => {
+        if (!pair.player1.name.trim() || !pair.player2.name.trim()) {
+          this.errors.push(
+            `La pareja ${index + 1} debe tener ambos nombres completos`,
+          );
+        }
+      });
+
+      const classicNames = this.pairs.flatMap((pair) => [
+        pair.player1.name.trim(),
+        pair.player2.name.trim(),
+      ]);
+      const uniqueClassicNames = new Set(
+        classicNames.map((name) => name.toLowerCase()),
+      );
+      if (uniqueClassicNames.size !== classicNames.length) {
+        this.errors.push("Los nombres de todas las parejas deben ser únicos");
+      }
+
+      return this.errors.length === 0;
+    }
+
     if (this.numberOfPlayers < 8) {
       this.errors.push("Debe haber al menos 8 jugadores");
     }
@@ -264,10 +349,6 @@ export class PlayerFormPageComponent implements OnInit {
 
     if (this.numberOfRounds < 1) {
       this.errors.push("Debe haber al menos 1 ronda");
-    }
-
-    if (this.duplicateName()) {
-      this.errors.push("Ya existe un torneo guardado con ese nombre");
     }
 
     const emptyNames = this.players.filter((p) => !p.name.trim());
@@ -306,6 +387,35 @@ export class PlayerFormPageComponent implements OnInit {
     return this.errors.length === 0;
   }
 
+  setCompetitionType(type: CompetitionType): void {
+    this.competitionType.set(type);
+    this.errors = [];
+
+    if (type === "americano") {
+      this.mode = "free";
+      this.pairs = [];
+      this.players.forEach((player) => {
+        player.pairId = undefined;
+      });
+      this.numberOfPlayers = Math.max(8, this.numberOfPlayers);
+      this.onNumberOfPlayersChange();
+      return;
+    }
+
+    this.mode = "free";
+    this.numberOfPlayers = Math.max(4, this.numberOfPlayers);
+    this.updateNumberOfPlayers();
+  }
+
+  handlePrimaryAction(): void {
+    if (this.isClassic()) {
+      this.generateClassicTournament();
+      return;
+    }
+
+    this.generateTournament();
+  }
+
   generateTournament(): void {
     if (!this.validate()) return;
 
@@ -313,6 +423,7 @@ export class PlayerFormPageComponent implements OnInit {
 
     try {
       const config: TournamentConfig = {
+        type: "americano",
         name: this.tournamentName,
         numberOfPlayers: this.numberOfPlayers,
         numberOfRounds: this.numberOfRounds,
@@ -333,6 +444,35 @@ export class PlayerFormPageComponent implements OnInit {
     }
   }
 
+  generateClassicTournament(): void {
+    if (!this.validate()) return;
+
+    this.loading = true;
+    try {
+      this.convertPairsToPlayers();
+      const config: ClassicTournamentConfig = {
+        type: "classic",
+        name: this.tournamentName,
+        numberOfPlayers: this.numberOfPlayers,
+        format: this.classicFormat,
+        seeded: this.classicSeeded,
+        thirdPlaceMatch: this.classicThirdPlaceMatch,
+        pairs: this.pairs.map((pair) => this.clonePair(pair)),
+        players: this.players.map((player) => ({ ...player })),
+      };
+
+      const tournamentId = this.facade.generateClassicTournament(config);
+      this.router.navigate(["/classic-tournament", tournamentId]);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al crear el torneo clásico";
+      this.errors.push(message);
+      this.loading = false;
+    }
+  }
+
   goToHistory(): void {
     this.facade.clearCurrentTournamentId();
     this.router.navigate(["/history"]);
@@ -341,15 +481,27 @@ export class PlayerFormPageComponent implements OnInit {
   clear(): void {
     if (confirm("¿Estás seguro de que quieres limpiar todos los datos?")) {
       this.facade.clearData();
+      this.competitionType.set("americano");
       this.tournamentName = "";
       this.numberOfPlayers = 8;
       this.numberOfRounds = 3;
       this.mode = "free";
+      this.classicFormat = "single-elimination";
+      this.classicSeeded = true;
+      this.classicThirdPlaceMatch = false;
       this.players = [];
       this.pairs = [];
       this.errors = [];
       this.updateNumberOfPlayers();
       this.notifications.showSuccess("Datos limpiados correctamente");
     }
+  }
+
+  private clonePair(pair: PairForm): Pair {
+    return {
+      id: pair.id,
+      player1: { ...pair.player1 },
+      player2: { ...pair.player2 },
+    };
   }
 }

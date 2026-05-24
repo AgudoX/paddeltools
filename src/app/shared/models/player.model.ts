@@ -11,11 +11,18 @@ export interface Pair {
   player2: Player;
 }
 
+export type CompetitionType = 'americano' | 'classic';
 export type ScoringMode = 'sets' | 'points';
+export type ClassicTournamentFormat = 'single-elimination' | 'groups-and-playoffs';
 
 export interface SetScore {
   pair1Games: number;
   pair2Games: number;
+}
+
+export interface MatchSlotSource {
+  kind: 'winner' | 'loser';
+  matchNumber: number;
 }
 
 export interface Match {
@@ -23,6 +30,8 @@ export interface Match {
   round: number;
   pair1: [Player, Player];
   pair2: [Player, Player];
+  pair1Source?: MatchSlotSource;
+  pair2Source?: MatchSlotSource;
   scoringMode: ScoringMode;
   sets: SetScore[];
   scorePair1?: number;
@@ -33,7 +42,8 @@ export interface Match {
 
 export type PairingMode = 'free' | 'fixed-pairs';
 
-export interface TournamentConfig {
+export interface AmericanoTournamentConfig {
+  type?: 'americano';
   name: string;
   numberOfPlayers: number;
   numberOfRounds: number;
@@ -41,6 +51,21 @@ export interface TournamentConfig {
   scoringMode: ScoringMode;
   players: Player[];
 }
+
+export interface ClassicTournamentConfig {
+  type: 'classic';
+  name: string;
+  numberOfPlayers: number;
+  format: ClassicTournamentFormat;
+  seeded: boolean;
+  thirdPlaceMatch: boolean;
+  pairs: Pair[];
+  players: Player[];
+}
+
+export type TournamentConfig =
+  | AmericanoTournamentConfig
+  | ClassicTournamentConfig;
 
 export interface PlayerStats {
   player: Player;

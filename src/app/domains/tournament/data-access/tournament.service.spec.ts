@@ -8,6 +8,8 @@ import {
   isValidPointsInput,
 } from "./tournament.service";
 import {
+  ClassicTournamentConfig,
+  Pair,
   Player,
   TournamentConfig,
   Match,
@@ -27,12 +29,48 @@ function makePlayers(count: number): Player[] {
 
 function makeConfig(overrides: Partial<TournamentConfig> & { players: Player[] }): TournamentConfig {
   return {
+    type: "americano",
     name: overrides.name ?? "Test Tournament",
     numberOfPlayers: overrides.players.length,
     numberOfRounds: overrides.numberOfRounds ?? 1,
     mode: overrides.mode ?? "free",
     scoringMode: overrides.scoringMode ?? "sets",
     players: overrides.players,
+  };
+}
+
+function makeClassicPairs(count: number): Pair[] {
+  return Array.from({ length: count }, (_, index) => {
+    const pairId = index + 1;
+    return {
+      id: pairId,
+      player1: {
+        id: pairId * 2 - 1,
+        name: `Pair ${pairId} A`,
+        position: "right",
+        pairId,
+      },
+      player2: {
+        id: pairId * 2,
+        name: `Pair ${pairId} B`,
+        position: "backhand",
+        pairId,
+      },
+    };
+  });
+}
+
+function makeClassicConfig(pairCount: number): ClassicTournamentConfig {
+  const pairs = makeClassicPairs(pairCount);
+  return {
+    type: "classic",
+    name: "Classic Test",
+    numberOfPlayers: pairCount * 2,
+    format: "single-elimination",
+    seeded: true,
+    thirdPlaceMatch: false,
+    pairs,
+    players: pairs.flatMap((pair) => [pair.player1, pair.player2]),
   };
 }
 
@@ -347,6 +385,27 @@ describe("TournamentService", () => {
         service.generateTournament(config);
       }
       expect(service.getHistory().length).toBeLessThanOrEqual(20);
+    });
+  });
+
+  describe("classic tournaments", () => {
+    it("generates a classic tournament and stores it", () => {
+      const tournamentId = service.generateClassicTournament(makeClassicConfig(4));
+
+      expect(typeof tournamentId).toBe("string");
+      expect(service["configSubject"].value?.type).toBe("classic");
+      expect(service["matchesSubject"].value.length).toBeGreaterThan(0);
+    });
+
+    it("propagates winners to the next round", () => {
+      service.generateClassicTournament(makeClassicConfig(4));
+
+      service.updateClassicMatchWinner(1, "pair1");
+      service.updateClassicMatchWinner(2, "pair2");
+
+      const semifinal = service["matchesSubject"].value.find((match) => match.number === 3);
+      expect(semifinal?.pair1[0].name).toContain("Pair 1");
+      expect(["Pair 2 A", "Pair 4 A"]).toContain(semifinal?.pair2[0].name);
     });
   });
 

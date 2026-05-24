@@ -71,7 +71,7 @@ import { Player } from '@shared/models/player.model';
       }
 
       &:hover {
-        border-color: rgba(204, 255, 0, 0.3);
+        border-color: rgba(var(--feature-accent-rgb, 204, 255, 0), 0.3);
 
         &::before {
           opacity: 1;
@@ -100,7 +100,7 @@ import { Player } from '@shared/models/player.model';
       font-family: var(--font-archivo);
       font-weight: var(--font-weight-bold);
       font-size: var(--font-size-base);
-      border: 1px solid rgba(204, 255, 0, 0.2);
+      border: 1px solid rgba(var(--feature-accent-rgb, 204, 255, 0), 0.2);
     }
 
     .player-number {

@@ -71,13 +71,32 @@ describe("NotificationService", () => {
   });
 
   it("uses Date.now() fallback when crypto.randomUUID is unavailable", () => {
-    const originalRandomUUID = (crypto as any).randomUUID;
-    (crypto as any).randomUUID = undefined;
+    const originalRandomUUID = (crypto as unknown as { randomUUID: unknown }).randomUUID;
+    (crypto as unknown as { randomUUID: undefined }).randomUUID = undefined;
 
     service.showSuccess("Test with fallback");
 
     expect(service.activeNotification()).not.toBeNull();
 
-    (crypto as any).randomUUID = originalRandomUUID;
+    (crypto as unknown as { randomUUID: unknown }).randomUUID = originalRandomUUID;
+  });
+
+  it("dismiss with wrong id does not clear timer", () => {
+    service.showSuccess("A");
+    const idA = service.activeNotification()!.id;
+    service.dismiss("wrong-id");
+    expect(service.activeNotification()).not.toBeNull();
+    expect(service.activeNotification()!.id).toBe(idA);
+  });
+
+  it("clearAll clears timer when set", () => {
+    service.showSuccess("A");
+    service.clearAll();
+    expect(service.activeNotification()).toBeNull();
+  });
+
+  it("clearAll works when no timer is active", () => {
+    service.clearAll();
+    expect(service.activeNotification()).toBeNull();
   });
 });

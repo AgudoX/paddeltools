@@ -85,8 +85,7 @@
   }
 }
 
-.floating-menu__toggle,
-.floating-menu__button {
+.floating-menu__toggle {
   min-width: fit-content;
   height: 44px;
   padding: 0 14px;
@@ -94,12 +93,14 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--on-dark);
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  gap: 8px;
   cursor: pointer;
   white-space: nowrap;
+  font-family: var(--font-archivo);
   transition:
     transform var(--transition-base),
     background var(--transition-base),
@@ -126,10 +127,6 @@
   }
 }
 
-.floating-menu__toggle {
-  display: none;
-}
-
 .floating-menu__body {
   display: contents;
 }
@@ -140,25 +137,6 @@
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.3px;
   text-transform: uppercase;
-}
-
-.floating-menu__button--primary {
-  background: rgba(204, 255, 0, 0.14);
-  color: var(--primary);
-  border-color: rgba(204, 255, 0, 0.24);
-  box-shadow: 0 0 24px rgba(204, 255, 0, 0.08);
-}
-
-.floating-menu__button--success {
-  background: rgba(0, 230, 118, 0.12);
-  color: var(--accent-green);
-  border-color: rgba(0, 230, 118, 0.22);
-}
-
-.floating-menu__button--active {
-  background: rgba(204, 255, 0, 0.14);
-  color: var(--primary);
-  border-color: rgba(204, 255, 0, 0.24);
 }
 
 @media (max-width: 680px) {
@@ -213,19 +191,6 @@
     color: var(--primary);
     border-color: rgba(204, 255, 0, 0.24);
   }
-
-  .floating-menu__button {
-    height: 42px;
-    width: 120px;
-    padding: 0 12px;
-    margin: 0px 5px;
-    gap: 6px;
-    justify-content: center;
-  }
-
-  .floating-menu__label {
-    font-size: 11px;
-  }
 }
 
 @media (min-width: 680px) {
@@ -236,10 +201,6 @@
     overflow: visible;
     pointer-events: auto;
     transform: none;
-  }
-
-  .floating-menu__button {
-    justify-content: center;
   }
 }
 
@@ -952,6 +913,7 @@
     text-overflow: unset;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
   }

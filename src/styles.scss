@@ -1,5 +1,3 @@
-@use "styles/effects";
-
 * {
   margin: 0;
   padding: 0;
@@ -45,10 +43,15 @@ body {
 
 :root {
   /* Brand */
+  --feature-accent-rgb: 204, 255, 0;
   --primary: #ccff00;
   --primary-bright: #dbff33;
   --primary-deep: #a3cc00;
   --on-primary: #000000;
+  --neon-shadow-soft: rgba(204, 255, 0, 0.3);
+  --neon-shadow-mid: rgba(204, 255, 0, 0.2);
+  --neon-shadow-strong: rgba(204, 255, 0, 0.6);
+  --neon-shadow-hot: rgba(204, 255, 0, 0.4);
 
   /* Text */
   --ink: #0c0e10;
@@ -84,10 +87,10 @@ body {
   --link: #ccff00;
 
   /* Violet / Purple accents */
-  --violet-300: oklch(81.1% 0.111 293.571);
-  --violet-400: oklch(70.2% 0.183 293.541);
-  --violet-500: oklch(60.6% 0.25 292.717);
-  --violet-600: oklch(54.1% 0.281 293.009);
+  --violet-300: #cfadff;
+  --violet-400: #b381ff;
+  --violet-500: #8a4aff;
+  --violet-600: #6833cc;
   --on-violet: #ffffff;
 
   /* Semantic */
@@ -179,6 +182,33 @@ body {
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neon-title {
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -1px;
+  padding: 20px;
+  display: inline-block;
+  text-shadow:
+    0 0 8px var(--neon-shadow-soft),
+    0 0 20px var(--neon-shadow-mid),
+    0 0 40px var(--neon-shadow-mid);
+  animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  0% {
+    text-shadow:
+      0 0 8px var(--neon-shadow-soft),
+      0 0 20px var(--neon-shadow-mid);
+  }
+  100% {
+    text-shadow:
+      0 0 12px var(--neon-shadow-strong),
+      0 0 30px var(--neon-shadow-hot),
+      0 0 50px var(--neon-shadow-mid);
+  }
 }
 
 h1,

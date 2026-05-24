@@ -3,7 +3,7 @@ import { HistoryPageComponent } from './history-page.component';
 import { TournamentFacade } from '@domain/tournament/data-access/tournament.facade';
 import { Router } from '@angular/router';
 import { signal, WritableSignal } from '@angular/core';
-import { TournamentRecord } from '@shared/models/player.model';
+import { Match, TournamentRecord } from '@shared/models/player.model';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 function makeRecord(id: string, overrides?: Partial<TournamentRecord>): TournamentRecord {
@@ -140,9 +140,29 @@ describe('HistoryPageComponent', () => {
       expect(getText('.history-info')).toContain('Puntos directos');
     });
 
+    it('shows classic tournament labels', () => {
+      _history.set([
+        makeRecord('1', {
+          config: {
+            type: 'classic',
+            name: 'Classic',
+            numberOfPlayers: 8,
+            format: 'single-elimination',
+            seeded: true,
+            thirdPlaceMatch: false,
+            pairs: [],
+            players: makeRecord('1').config.players,
+          } as TournamentRecord['config'],
+        }),
+      ]);
+      fixture.detectChanges();
+      expect(getText('.history-info')).toContain('Torneo clásico');
+      expect(getText('.history-info')).toContain('Cuadro con siembra');
+    });
+
     it('shows match count and player count', () => {
       const record = makeRecord('1');
-      record.matches = [{ number: 1 } as any, { number: 2 } as any];
+      record.matches = [{ number: 1 } as Match, { number: 2 } as Match];
       record.config.players = record.config.players.slice(0, 6);
       _history.set([record]);
       fixture.detectChanges();
@@ -249,8 +269,33 @@ describe('HistoryPageComponent', () => {
     });
 
     it('viewTournament navigates to tournament route', () => {
-      component.viewTournament('abc-123');
-      expect(routerSpy.navigate).toHaveBeenCalledWith(['/tournament', 'abc-123']);
+      component.viewTournament('1');
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/tournament', '1']);
+    });
+
+    it('viewTournament navigates to / when record not found', () => {
+      component.viewTournament('non-existent');
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('viewTournament navigates to classic route for classic records', () => {
+      _history.set([
+        makeRecord('classic-1', {
+          config: {
+            type: 'classic',
+            name: 'Classic',
+            numberOfPlayers: 8,
+            format: 'single-elimination',
+            seeded: true,
+            thirdPlaceMatch: false,
+            pairs: [],
+            players: makeRecord('1').config.players,
+          } as TournamentRecord['config'],
+        }),
+      ]);
+      fixture.detectChanges();
+      component.viewTournament('classic-1');
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/classic-tournament', 'classic-1']);
     });
 
     it('onDelete calls facade.deleteHistoryRecord', () => {

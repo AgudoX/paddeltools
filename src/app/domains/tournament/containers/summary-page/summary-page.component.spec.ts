@@ -39,6 +39,11 @@ function makeStats(overrides?: Partial<PlayerStats>): PlayerStats {
   };
 }
 
+interface ComponentTestAccess {
+  getMatchScoreDisplay(match: Match): string;
+  shouldShowSet(match: Match, setIdx: number): boolean;
+}
+
 describe('SummaryPageComponent', () => {
   let fixture: ComponentFixture<SummaryPageComponent>;
   let component: SummaryPageComponent;
@@ -57,16 +62,10 @@ describe('SummaryPageComponent', () => {
     updateSetScores: ReturnType<typeof vi.fn>;
   };
   let clipboardSpy: { writeText: ReturnType<typeof vi.fn> };
-  let windowOpenSpy: ReturnType<typeof vi.fn>;
 
   function getText(selector: string): string {
     const el = fixture.nativeElement.querySelector(selector);
     return el ? el.textContent.trim() : '';
-  }
-
-  function getAllText(selector: string): string[] {
-    return Array.from(fixture.nativeElement.querySelectorAll(selector))
-      .map((el: unknown) => (el as Element).textContent.trim());
   }
 
   beforeEach(async () => {
@@ -87,7 +86,6 @@ describe('SummaryPageComponent', () => {
       configurable: true,
       writable: true,
     });
-    windowOpenSpy = vi.fn();
   });
 
   async function createComponent(matches: Match[] = [], routeId: string | null = 'test-1') {
@@ -217,11 +215,15 @@ describe('SummaryPageComponent', () => {
     });
 
     it('toggles showStatistics', () => {
+      vi.useFakeTimers();
       expect(component.showStatistics).toBe(false);
       component.toggleStatistics();
+      vi.advanceTimersByTime(100);
       expect(component.showStatistics).toBe(true);
       component.toggleStatistics();
+      vi.advanceTimersByTime(100);
       expect(component.showStatistics).toBe(false);
+      vi.useRealTimers();
     });
 
     it('updates statistics when showing', () => {
@@ -453,12 +455,12 @@ describe('SummaryPageComponent', () => {
           { pair1Games: 6, pair2Games: 3 },
         ],
       });
-      expect((component as any).getMatchScoreDisplay(match)).toBe('2-0');
+      expect((component as unknown as ComponentTestAccess).getMatchScoreDisplay(match)).toBe('2-0');
     });
 
     it('returns empty string for incomplete sets match', () => {
       const match = makeMatch(1, 1, { sets: [{ pair1Games: 2, pair2Games: 3 }] });
-      expect((component as any).getMatchScoreDisplay(match)).toBe('');
+      expect((component as unknown as ComponentTestAccess).getMatchScoreDisplay(match)).toBe('');
     });
 
     it('returns score pair for points match', () => {
@@ -468,7 +470,7 @@ describe('SummaryPageComponent', () => {
         scorePair1: 10,
         scorePair2: 8,
       });
-      expect((component as any).getMatchScoreDisplay(match)).toBe('10-8');
+      expect((component as unknown as ComponentTestAccess).getMatchScoreDisplay(match)).toBe('10-8');
     });
 
     it('returns inverse set score when pair2 wins two sets', () => {
@@ -478,14 +480,14 @@ describe('SummaryPageComponent', () => {
           { pair1Games: 3, pair2Games: 6 },
         ],
       });
-      expect((component as any).getMatchScoreDisplay(match)).toBe('0-2');
+      expect((component as unknown as ComponentTestAccess).getMatchScoreDisplay(match)).toBe('0-2');
     });
   });
 
   describe('shouldShowSet', () => {
     it('always shows first set', () => {
       const match = makeMatch(1, 1, { sets: [{ pair1Games: 0, pair2Games: 0 }] });
-      expect((component as any).shouldShowSet(match, 0)).toBe(true);
+      expect((component as unknown as ComponentTestAccess).shouldShowSet(match, 0)).toBe(true);
     });
 
     it('shows set 2 if set 1 is complete', () => {
@@ -495,7 +497,7 @@ describe('SummaryPageComponent', () => {
           { pair1Games: 0, pair2Games: 0 },
         ],
       });
-      expect((component as any).shouldShowSet(match, 1)).toBe(true);
+      expect((component as unknown as ComponentTestAccess).shouldShowSet(match, 1)).toBe(true);
     });
 
     it('shows set 3 if sets are split (tiebreak)', () => {
@@ -506,7 +508,7 @@ describe('SummaryPageComponent', () => {
           { pair1Games: 0, pair2Games: 0 },
         ],
       });
-      expect((component as any).shouldShowSet(match, 2)).toBe(true);
+      expect((component as unknown as ComponentTestAccess).shouldShowSet(match, 2)).toBe(true);
     });
 
     it('does not show set 3 when same player won first two', () => {
@@ -517,7 +519,7 @@ describe('SummaryPageComponent', () => {
           { pair1Games: 0, pair2Games: 0 },
         ],
       });
-      expect((component as any).shouldShowSet(match, 2)).toBe(false);
+      expect((component as unknown as ComponentTestAccess).shouldShowSet(match, 2)).toBe(false);
     });
 
     it('shows set 3 if it has data even when same player won first two', () => {
@@ -528,12 +530,12 @@ describe('SummaryPageComponent', () => {
           { pair1Games: 1, pair2Games: 0 },
         ],
       });
-      expect((component as any).shouldShowSet(match, 2)).toBe(true);
+      expect((component as unknown as ComponentTestAccess).shouldShowSet(match, 2)).toBe(true);
     });
 
     it('returns false for out of bounds index', () => {
       const match = makeMatch(1, 1, { sets: [{ pair1Games: 0, pair2Games: 0 }] });
-      expect((component as any).shouldShowSet(match, 5)).toBe(false);
+      expect((component as unknown as ComponentTestAccess).shouldShowSet(match, 5)).toBe(false);
     });
 
     it('shows the current set when the previous one is incomplete but current has data', () => {
@@ -543,7 +545,7 @@ describe('SummaryPageComponent', () => {
           { pair1Games: 1, pair2Games: 0 },
         ],
       });
-      expect((component as any).shouldShowSet(match, 1)).toBe(true);
+      expect((component as unknown as ComponentTestAccess).shouldShowSet(match, 1)).toBe(true);
     });
   });
 
@@ -609,6 +611,67 @@ describe('SummaryPageComponent', () => {
 
     it('trackSet returns index', () => {
       expect(component.trackSet(7)).toBe(7);
+    });
+  });
+
+  describe('clearOnZero', () => {
+    it('clears set field when value is 0', () => {
+      const match = makeMatch(1, 1, {
+        sets: [{ pair1Games: 0, pair2Games: 0 }],
+      });
+      component.clearOnZero(match, 'pair1Games', 0);
+      expect(match.sets[0].pair1Games).toBeNull();
+    });
+
+    it('clears match score field when value is 0', () => {
+      const match = makeMatch(1, 1, {
+        scoringMode: 'points',
+        sets: [],
+        scorePair1: 0,
+        scorePair2: 5,
+      });
+      component.clearOnZero(match, 'scorePair1');
+      expect(match.scorePair1).toBeNull();
+    });
+
+    it('does not clear set field when value is non-zero', () => {
+      const match = makeMatch(1, 1, {
+        sets: [{ pair1Games: 6, pair2Games: 4 }],
+      });
+      component.clearOnZero(match, 'pair2Games', 0);
+      expect(match.sets[0].pair2Games).toBe(4);
+    });
+
+    it('does not clear match score field when value is non-zero', () => {
+      const match = makeMatch(1, 1, {
+        scoringMode: 'points',
+        sets: [],
+        scorePair2: 10,
+      });
+      component.clearOnZero(match, 'scorePair2');
+      expect(match.scorePair2).toBe(10);
+    });
+
+    it('does nothing when set field is already null', () => {
+      const match = makeMatch(1, 1, {
+        sets: [{ pair1Games: 0, pair2Games: 0 }],
+      });
+      match.sets[0].pair1Games = null as unknown as number;
+      component.clearOnZero(match, 'pair1Games', 0);
+      expect(match.sets[0].pair1Games).toBeNull();
+    });
+
+    it('handles setIndex for different positions', () => {
+      const match = makeMatch(1, 1, {
+        sets: [
+          { pair1Games: 3, pair2Games: 6 },
+          { pair1Games: 0, pair2Games: 0 },
+          { pair1Games: 0, pair2Games: 0 },
+        ],
+      });
+      component.clearOnZero(match, 'pair2Games', 1);
+      expect(match.sets[1].pair2Games).toBeNull();
+      expect(match.sets[0].pair2Games).toBe(6);
     });
   });
 

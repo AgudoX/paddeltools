@@ -5,7 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { TournamentFacade } from '@domain/tournament/data-access/tournament.facade';
 import { TournamentRecord, Match, PlayerStats } from '@shared/models/player.model';
 import { PrimaryButtonComponent } from '@shared/components/primary-button/primary-button.component';
-import { isSetComplete as _isSetComplete, isMatchComplete as _isMatchComplete, getMatchWinner as _getMatchWinner, getSetWinner as _getSetWinner } from '@domain/tournament/data-access/tournament.service';
+import {
+  isSetComplete as _isSetComplete,
+  isMatchComplete as _isMatchComplete,
+  getMatchWinner as _getMatchWinner,
+  getSetWinner as _getSetWinner,
+} from '@domain/tournament/data-access/utils/tournament-scoring.utils';
 
 @Component({
   selector: 'app-history-detail-page',
@@ -19,8 +24,8 @@ import { isSetComplete as _isSetComplete, isMatchComplete as _isMatchComplete, g
             <div class="header-left">
               <h1 class="main-title"><mat-icon>history</mat-icon> {{ record.label }}</h1>
               <span class="header-subtitle">
-                {{ record.config.mode === 'fixed-pairs' ? 'Parejas fijas' : 'Libre' }}
-                · {{ record.config.scoringMode === 'sets' ? 'Por sets' : 'Puntos directos' }}
+                {{ recordTypeLabel() }}
+                · {{ recordFormatLabel() }}
                 · {{ record.matches.length }} partidos
               </span>
             </div>
@@ -265,6 +270,10 @@ export class HistoryDetailPageComponent implements OnInit {
     if (id) {
       this.record = this.facade.loadTournament(id);
       if (this.record) {
+        if (this.record.config.type === 'classic') {
+          this.router.navigate(['/classic-tournament', this.record.id]);
+          return;
+        }
         this.statistics = this.facade.calculateStatistics();
         this.groupMatchesByRound();
       }
@@ -343,5 +352,29 @@ export class HistoryDetailPageComponent implements OnInit {
 
   backToHistory(): void {
     this.router.navigate(['/history']);
+  }
+
+  protected recordTypeLabel(): string {
+    if (!this.record) {
+      return '';
+    }
+
+    if (this.record.config.type === 'classic') {
+      return 'Torneo clásico';
+    }
+
+    return this.record.config.mode === 'fixed-pairs' ? 'Parejas fijas' : 'Libre';
+  }
+
+  protected recordFormatLabel(): string {
+    if (!this.record) {
+      return '';
+    }
+
+    if (this.record.config.type === 'classic') {
+      return this.record.config.seeded ? 'Cuadro con siembra' : 'Cuadro abierto';
+    }
+
+    return this.record.config.scoringMode === 'sets' ? 'Por sets' : 'Puntos directos';
   }
 }

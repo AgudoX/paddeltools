@@ -79,39 +79,43 @@ import { Player } from '@shared/models/player.model';
   `,
   styles: `
     .pair-card {
-      background: var(--surface-deep);
-      border: 1px solid var(--hairline-dark);
-      border-radius: var(--radius-lg);
-      padding: 20px;
+      display: grid;
+      gap: var(--space-lg);
+      padding: var(--space-lg);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(var(--feature-accent-rgb, 177, 76, 255), 0.2);
+      background:
+        radial-gradient(circle at top right, rgba(var(--feature-accent-rgb, 177, 76, 255), 0.18), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+        var(--surface-deep);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 24px 40px rgba(0, 0, 0, 0.22);
       transition: all var(--transition-base);
-
-      &:hover {
-        border-color: rgba(204, 255, 0, 0.3);
-      }
     }
 
     .pair-header {
-      margin-bottom: 16px;
+      margin-bottom: 0;
     }
 
     .pair-badge {
       display: inline-flex;
       align-items: center;
-      padding: 6px 16px;
-      background: var(--primary);
-      color: var(--on-primary);
+      padding: 6px 12px;
       border-radius: var(--radius-full);
+      background: rgba(var(--feature-accent-rgb, 177, 76, 255), 0.14);
+      color: var(--primary-bright);
       font-family: var(--font-archivo);
+      font-size: var(--font-size-xs);
       font-weight: var(--font-weight-bold);
-      font-size: var(--font-size-sm);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
     }
 
     .pair-body {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: var(--space-md);
 
       @media (min-width: 640px) {
         flex-direction: row;
@@ -121,20 +125,20 @@ import { Player } from '@shared/models/player.model';
 
     .pair-slot {
       flex: 1;
-      background: var(--surface-elevated);
       padding: 16px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--hairline-dark);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(var(--feature-accent-rgb, 177, 76, 255), 0.16);
+      background: rgba(var(--feature-accent-rgb, 177, 76, 255), 0.06);
     }
 
     .slot-label {
       font-family: var(--font-archivo);
       font-weight: var(--font-weight-bold);
-      color: var(--primary);
+      color: var(--primary-bright);
       margin-bottom: 12px;
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-xs);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
     }
 
     .pair-divider {
