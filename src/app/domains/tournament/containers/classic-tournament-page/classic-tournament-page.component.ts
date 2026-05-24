@@ -644,18 +644,19 @@ import {
     }
 
     .bracket-match__editor-grid {
-      display: grid;
+      display: flex;
+      flex-wrap: wrap;
       gap: 10px;
-
-      @media (min-width: 880px) {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
     }
 
     .set-editor {
-      display: grid;
-      gap: 8px;
-      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 1 1 190px;
+      gap: 12px;
+      min-width: 0;
+      padding: 10px 12px;
       border-radius: 12px;
       background: rgba(177, 76, 255, 0.08);
       border: 1px solid rgba(177, 76, 255, 0.16);
@@ -668,29 +669,48 @@ import {
       font-weight: var(--font-weight-bold);
       text-transform: uppercase;
       letter-spacing: 0.4px;
+      white-space: nowrap;
     }
 
     .set-editor__inputs {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-      gap: 8px;
+      display: flex;
       align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      color: rgba(238, 238, 238, 0.72);
+      font-family: var(--font-archivo);
+      font-weight: var(--font-weight-bold);
     }
 
     .set-editor__inputs input {
-      width: 100%;
-      min-width: 0;
-      padding: 10px 12px;
+      width: 46px;
+      min-width: 46px;
+      height: 42px;
+      padding: 0 8px;
       border-radius: 10px;
       border: 1px solid rgba(177, 76, 255, 0.2);
       background: rgba(8, 6, 12, 0.85);
-      color: var(--on-dark);
+      color: #ffffff;
+      -webkit-text-fill-color: #ffffff;
+      caret-color: var(--primary-bright);
       font: inherit;
+      font-size: 1rem;
+      line-height: 42px;
       text-align: center;
+      appearance: textfield;
+    }
+
+    .set-editor__inputs input::-webkit-outer-spin-button,
+    .set-editor__inputs input::-webkit-inner-spin-button {
+      margin: 0;
+      appearance: none;
     }
 
     .set-editor__inputs input:disabled {
-      opacity: 0.48;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(177, 76, 255, 0.1);
+      color: rgba(238, 238, 238, 0.58);
+      -webkit-text-fill-color: rgba(238, 238, 238, 0.58);
       cursor: not-allowed;
     }
 
