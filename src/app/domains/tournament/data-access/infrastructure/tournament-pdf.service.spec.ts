@@ -391,6 +391,37 @@ describe("TournamentPdfService", () => {
     expect(saveMock).toHaveBeenCalledWith("packed-direct.pdf");
   });
 
+  it("splits an 11-pair direct bracket before the first round overlaps", () => {
+    const pairs = Array.from({ length: 11 }, (_, index) => ({
+      id: index + 1,
+      player1: makePlayer(index * 2 + 1, `Jugador ${index * 2 + 1}`),
+      player2: makePlayer(index * 2 + 2, `Jugador ${index * 2 + 2}`),
+    }));
+    const config = makeConfig({
+      format: "single-elimination",
+      pairs,
+      numberOfPlayers: pairs.length * 2,
+      players: pairs.flatMap((pair) => [pair.player1, pair.player2]),
+    });
+    const matches = [
+      ...Array.from({ length: 8 }, (_, index) =>
+        makeMatch({ number: index + 1, round: 1, stage: "playoff" }),
+      ),
+      ...Array.from({ length: 4 }, (_, index) =>
+        makeMatch({ number: index + 9, round: 2, stage: "playoff" }),
+      ),
+      ...Array.from({ length: 2 }, (_, index) =>
+        makeMatch({ number: index + 13, round: 3, stage: "playoff" }),
+      ),
+      makeMatch({ number: 15, round: 4, stage: "playoff" }),
+    ];
+
+    service.exportClassicBracket(config, matches, "Once Parejas");
+
+    expect(addPageMock).toHaveBeenCalledTimes(2);
+    expect(saveMock).toHaveBeenCalledWith("once-parejas.pdf");
+  });
+
   it("uses a default filename when tournament name is empty", () => {
     const config = makeConfig({ name: "" });
     const matches = [makeMatch()];
